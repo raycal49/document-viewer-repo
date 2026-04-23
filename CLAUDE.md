@@ -128,6 +128,41 @@ Each milestone is shippable on its own — don't build them in parallel.
 
 ---
 
+## Testing philosophy
+
+Tests on the Unity client exist to receive feedback from code whose health we care about — not to validate every line. The cost of a test must be less than the cost of the thing being tested. No test sprawl; no interface-and-mock towers dwarfing the production code.
+
+The Unity Test Framework is already wired up in this project: `Assets/Tests/EditMode/` (e.g. `IceCandidateParserTests.cs`, `SignalingMessageTests.cs`) and `Assets/Tests/PlayMode/` (e.g. `SignalingClientTests.cs`). New tests live alongside the existing ones and use NUnit in the same style.
+
+**Per-story check, before writing code:**
+1. Is there pure logic here whose silent regression would bite later? (parsing, sizing math, state transitions)
+2. Would a test cost less than writing the thing?
+3. Is this subtle or hot-path enough that manual verification is unreliable?
+
+If all three are "no," skip the test. If the code is pure wiring (a one-line `UnityWebRequest` wrapper, a coroutine forwarder), mocking to test it is not worth it.
+
+**Preferred test types, cheapest first:**
+- **EditMode unit tests** — pure C# classes, fastest; preferred wherever possible. Match the style of `SignalingMessageTests.cs`.
+- **PlayMode tests** — when MonoBehaviour lifecycle, coroutines, or runtime behavior is the actual thing under test. Match the style of `SignalingClientTests.cs`.
+- **Manual on-device / Editor verification** — XR hardware, real networking, visual rendering.
+
+**Design for testability, lightly.** Extract pure logic into static methods taking inputs and returning values when it's natural (aspect-ratio sizing, URL construction, DTO parsing). Don't add interfaces just to enable mocking unless the payoff is obvious.
+
+**Escape hatch.** If a story has no obvious, cheap test path — implement it, show the implementation to the user, and ask whether it ships untested. Silent no-testing is not okay; explicit-and-approved no-testing is.
+
+**Retroactive assessment of shipped stories:**
+- **US-01** (`PdfPageDisplay` scaffold) — no tests. Nearly all Unity primitives (`CreatePrimitive`, material assignment); a test would mostly verify Unity itself.
+- **US-02** (`TextureDownloader`) — no tests. Thin `UnityWebRequestTexture` wrapper; mocking HTTP would be larger than the helper.
+- **US-03** (hardcoded-URL render) — no tests. The "test" is "press Play and see the Quad," already in the AC.
+
+**Forward-looking candidates worth tests:**
+- **US-04** (`DocumentShowMessage` DTO roundtrip) — trivial `JsonUtility.FromJson` test, exactly like `SignalingMessageTests.cs`. Cheap and worth it.
+- **US-05** (dispatch `document.show`) — fake WebSocket payload, assert event fires with right DTO. Fits `SignalingClientTests.cs` pattern.
+- **US-08** (aspect-ratio sizing) — extract the scale calc as a pure static method; unit-test with portrait/landscape fixtures.
+- **US-14** (texture lifecycle) — destruction/leak behavior is exactly the kind of subtle regression worth catching; PlayMode test possible.
+
+---
+
 ## Unity user stories
 
 **Critical finding:** The Meta XR Interaction SDK is imported in `manifest.json` (v85.0) but never used anywhere in the codebase. No `Grabbable`, no `PokeInteractable`, no sample prefabs. Stories US-10 and US-13 are genuinely new ground — a bounded spike (US-10) is required before committing to those estimates.
