@@ -1,0 +1,122 @@
+x canary test
+
+callHelpers.ts
+  runConnect
+  x sets status to disconnected when signaling disconnects
+  x sets status to error when signaling reports an error
+  x populates incoming calls when the server returns active calls
+  x sets status to error and logs when connect() throws
+  x rejoins the active room when reconnected
+  x does not join a group when reconnected with no active room
+
+  runAcceptCall
+  x sends call-accepted, sets status to connecting, and logs after the delay
+  x clears activeRoomRef when onFailed is called
+
+  mergeIncomingCalls
+  x returns an empty array when both lists are empty
+  x does not mutate the original prev array
+
+signalingMessageHandlers.ts
+  routeSignalingMessage
+  x does nothing for an unknown message type
+
+  handleCallRequest
+  x does nothing when callerName is missing
+  x returns prev unchanged when the room already exists
+  x appends the new call when the room is not yet in the list
+
+  handleCallClaimed
+  x does nothing when the claimed room is the currently active room
+  x leaves other calls unchanged
+  x removes the call after the delay
+
+  handleCallEnded
+  x removes the ended call from the list
+  x cleans up and sets status when the active room ends
+
+  handleCallAlreadyClaimed
+  x does nothing when a different room is claimed
+  x cleans up, sets error, and logs when the active room is claimed
+
+  handleOffer
+  x ignores an offer with no sdp
+  x sends the answer and logs on successful offer handling
+  x logs the error and sets status to error when offer handling fails
+
+  handleIceCandidate
+  x ignores a message with no candidate
+  x logs the error when addIceCandidate rejects
+
+webrtcHooks.ts
+  useAddLog
+  x prepends a timestamped message to the front of the log list
+
+  useAttachStream
+  x does nothing when videoRef.current is null
+  x sets srcObject to the first stream when one is present
+  x creates a new MediaStream and adds the track when srcObject is null
+  x silences AbortError from play()
+  x rethrows non-AbortError from play()
+
+  useHandleMessage
+  x omits the room bracket when room is not present
+  x calls routeSignalingMessage with the message and context
+
+  useConnect
+  x calls runConnect with the provided dependencies
+
+  useAcceptCall
+  x logs and does not accept when already in a call
+  x sets activeRoomRef and calls runAcceptCall when not already in a call
+
+  useDeclineCall
+  x removes the declined call from the incoming calls list
+  x logs that the call was declined
+
+  useDisconnect
+  x does not send call-ended when there is no active room
+  x runs full teardown regardless of active room state
+
+webrtcService.ts
+  create
+  x closes any existing peer connection before creating a new one
+  x resets pending candidates on each create
+  x creates RTCPeerConnection with the provided ICE servers
+  x wires ontrack, onicecandidate, oniceconnectionstatechange and adds transceivers
+  x calls onIceCandidate callback when a candidate is produced
+  x does not call onIceCandidate when candidate is null
+  x calls onStateChange with the current ICE connection state
+  x does not call onStateChange when pc is null at time of state change
+
+  handleOffer
+  x throws when called before create()
+  x sets remote description, creates and returns answer sdp
+  x flushes queued candidates before creating the answer
+  x clears pending candidates after flushing
+
+  addIceCandidate
+  x adds the candidate immediately when remoteDescription is set
+  x queues the candidate when remoteDescription is not set
+
+  cleanup
+  x closes the peer connection when one exists
+  x does not throw when called with no peer connection
+  x clears pending candidates on cleanup
+
+peerCallbacks.ts
+  onTrack
+  x logs the track kind
+  x calls attachStream with the track event
+  x sets status to streaming
+
+  onIceCandidate
+  x sends ice-candidate to the group when signaling is available
+  x does nothing when signaling is null
+
+  onStateChange
+  x logs the ICE connection state
+  x nullifies activeRoomRef and sets error on disconnected
+  x nullifies activeRoomRef and sets error on failed
+  x does not set error or nullify ref for non-terminal states
+  x does not set error or nullify ref for checking state

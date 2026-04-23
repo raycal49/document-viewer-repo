@@ -1,0 +1,65 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Pp]rofiler[Cc]aptures/
+
+*.log
+
+# Crash / memory dump files
+mono_crash.*
+*.blob
+
+# Archives
+*.zip
+
+# IDE
+.vscode/
+.vs/
+.gradle/
+.consulo/
+
+# Solution / project files
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity generated meta debug files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Crash reports
+sysinfo.txt
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.unitypackage.meta
+*.app
+
+# Memory captures / recordings
+/[Mm]emory[Cc]aptures/
+/[Rr]ecordings/
+
+# Addressables
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
