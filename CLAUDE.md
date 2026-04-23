@@ -75,6 +75,25 @@ New `DocumentPicker.tsx` component:
 
 ---
 
+## Unity-side assumptions (dev in isolation)
+
+Unity is being built ahead of the backend and web app. Two assumptions keep this safe:
+
+**Format-agnostic input.** Unity only ever sees PNG URLs — never the source file. The server-side rasterization layer turns PDFs, TIFFs, DOCX, scanned images, etc. into PNGs. Treat `pageUrl` as opaque: don't assume `.png`, don't parse it, don't check the host. `UnityWebRequestTexture` just fetches and renders whatever URL arrives. Realistic source formats the backend will need to handle for utility-station work: PDF (~90% — OEM manuals from ABB/Siemens/GE/Eaton, IEEE/IEC standards), multi-page TIFF (scanned legacy manuals), PNG/JPG (nameplate photos, wiring diagrams, single-page references), DOCX (work instructions, checklists). Adding any of these is a backend-only change.
+
+**Isolation contract.** Until the web app exists, Unity is driven by fakes:
+- US-03 hardcoded `_testUrl` — proves rendering without any signaling.
+- US-07 Editor harness — fires fake `OnDocumentShow` events directly into `SignalingClient`.
+- US-13's POST — point at `httpbin.org/post` or a local echo server until `/documents/select` is live.
+
+The contract between Unity and the outside world is just two messages:
+- **In:** `DocumentShowMessage` JSON over the existing WebSocket.
+- **Out:** `POST /documents/select` with `{ documentId, page }`.
+
+Any backend satisfying those two contracts can drive the client.
+
+---
+
 ## Suggested build order
 
 1. **Hello-PDF, no infrastructure.** Manually rasterize one PDF, drop PNGs in a public Blob container, hardcode a URL in Unity, get a Quad showing page 1. No backend changes, no web, no signaling.
