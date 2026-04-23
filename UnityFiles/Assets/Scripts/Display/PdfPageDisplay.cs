@@ -3,6 +3,8 @@ using UnityEngine;
 public class PdfPageDisplay : MonoBehaviour
 {
     [SerializeField] private Texture2D _testTexture;
+    [SerializeField] private string _testUrl;
+    [SerializeField] private bool _isDevMode;
 
     private GameObject _quad;
     private Material _material;
@@ -22,12 +24,26 @@ public class PdfPageDisplay : MonoBehaviour
         _quad.SetActive(false);
     }
 
+    private void Start()
+    {
+        if (_isDevMode && !string.IsNullOrEmpty(_testUrl))
+            ShowFromUrl(_testUrl);
+    }
+
     public void Show(Texture2D tex)
     {
         if (tex == null) return;
         _currentTexture = tex;
         _material.mainTexture = tex;
         _quad.SetActive(true);
+    }
+
+    public void ShowFromUrl(string url)
+    {
+        StartCoroutine(TextureDownloader.Download(
+            url,
+            Show,
+            err => Debug.LogError($"PdfPageDisplay: texture download failed — {err}")));
     }
 
     [ContextMenu("Test Show")]

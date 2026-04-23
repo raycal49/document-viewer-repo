@@ -202,7 +202,7 @@ Each milestone is shippable on its own — don't build them in parallel.
 |---|---|---|
 | US-01 | `PdfPageDisplay` scaffold | ✅ Done |
 | US-02 | PNG-URL-to-Texture download helper | ✅ Done |
-| US-03 | End-to-end render with hardcoded URL | — |
+| US-03 | End-to-end render with hardcoded URL | ✅ Done |
 | US-04 | `DocumentShowMessage` DTO | — |
 | US-05 | Dispatch `document.show` in `SignalingClient` | — |
 | US-06 | Connect event to display | — |
