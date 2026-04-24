@@ -139,6 +139,9 @@ Each phase should remain shippable and independently demoable.
 | `UnityFiles/Assets/Scripts/Network/WebRTCSender.cs` | Existing `ConcurrentQueue` threading pattern to reuse |
 | `UnityFiles/Assets/Scripts/Camera/VideoCompositor.cs` | Pattern for displaying texture content on 3D surface |
 | `UnityFiles/Assets/Scripts/Models/Dtos.cs` | Home for document channel DTOs |
+| `UnityFiles/Assets/Scripts/Document/DocumentManager.cs` | Document session orchestration + chunk intake routing |
+| `UnityFiles/Assets/Scripts/Document/DocumentStateModels.cs` | Shared document/session and assembly state models |
+| `UnityFiles/Assets/Scripts/Document/PageByteAssembler.cs` | Pure static chunk-byte assembly utility |
 | `WebApp/src/components/DocumentPicker.tsx` | Existing document selection UX entry point |
 
 ---
@@ -211,6 +214,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 
 **US-06 — `DocumentManager` integration path** · M · US-05, US-21
 - Route incoming messages to reassembly/cache/render pipeline.
+- Document/session state is modeled explicitly via `DocumentSessionState` and `PageAssemblyState`; chunk composition is delegated to static `PageByteAssembler`.
 
 **US-16 — Chunk reassembly + JPEG decode** · M · US-06
 - Reassemble by `(documentId, pageIndex)` and decode into texture bytes.
@@ -263,8 +267,8 @@ No mandatory test quota per story; test where risk and ROI justify it.
 |---|---|---|
 | US-01 | `PdfPageDisplay` scaffold | ✅ Done |
 | US-02 | URL texture helper (legacy/dev utility) | ✅ Done |
-| US-03 | Bootstrap render path (bytes-only) | 🔄 Revised |
-| US-04 | Document channel DTO set | — |
+| US-03 | Bootstrap render path (bytes-only) | ✅ Done |
+| US-04 | Document channel DTO set | ✅ Done |
 | US-05 | Data-channel dispatch | ✅ Done |
 | US-06 | Connect to `DocumentManager` | ✅ Done |
 | US-07 | Editor harness for chunk flow | — |
