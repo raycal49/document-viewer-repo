@@ -15,32 +15,16 @@ public class DocumentManager : MonoBehaviour
     public event Action<DocumentPageMessage> OnDocumentPage;
     public event Action<DocumentCloseMessage> OnDocumentClose;
 
-    public bool IsDocumentOpen => _isDocumentOpen;
-    public string CurrentDocumentId => _currentDocumentId;
-    public string CurrentDocumentName => _currentDocumentName;
-    public int TotalPages => _totalPages;
-    public int CurrentPageIndex => _currentPageIndex;
+    public bool IsDocumentOpen => _sessionState.IsDocumentOpen;
+    public string CurrentDocumentId => _sessionState.CurrentDocumentId;
+    public string CurrentDocumentName => _sessionState.CurrentDocumentName;
+    public int TotalPages => _sessionState.TotalPages;
+    public int CurrentPageIndex => _sessionState.CurrentPageIndex;
 
     private readonly Dictionary<string, PageAssemblyState> _pageAssemblies = new Dictionary<string, PageAssemblyState>();
+    private readonly DocumentSessionState _sessionState = new DocumentSessionState();
 
     private RTCDataChannel _dataChannel;
-    private bool _isDocumentOpen;
-    private string _currentDocumentId;
-    private string _currentDocumentName;
-    private int _totalPages;
-    private int _currentPageIndex = -1;
-
-    private sealed class PageAssemblyState
-    {
-        public int PageIndex;
-        public int TotalPages;
-        public int Width;
-        public int Height;
-        public int TotalChunks;
-        public byte[][] Chunks;
-        public int ReceivedChunks;
-        public float CreatedAt;
-    }
 
     public void HandleDataChannel(RTCDataChannel channel, ConcurrentQueue<string> documentQueue)
     {
@@ -112,11 +96,11 @@ public class DocumentManager : MonoBehaviour
             return;
         }
 
-        _isDocumentOpen = true;
-        _currentDocumentId = message.documentId;
-        _currentDocumentName = message.documentName;
-        _totalPages = Mathf.Max(0, message.totalPages);
-        _currentPageIndex = _totalPages > 0 ? 0 : -1;
+        _sessionState.IsDocumentOpen = true;
+        _sessionState.CurrentDocumentId = message.documentId;
+        _sessionState.CurrentDocumentName = message.documentName;
+        _sessionState.TotalPages = Mathf.Max(0, message.totalPages);
+        _sessionState.CurrentPageIndex = _sessionState.TotalPages > 0 ? 0 : -1;
 
         ClearAssembliesForCurrentDocument();
         OnDocumentStart?.Invoke(message);
@@ -130,21 +114,21 @@ public class DocumentManager : MonoBehaviour
             return;
         }
 
-        if (!_isDocumentOpen)
+        if (!_sessionState.IsDocumentOpen)
         {
             Debug.LogWarning("DocumentManager: ignoring document-page because no document is open.");
             return;
         }
 
-        if (!string.Equals(message.documentId, _currentDocumentId, StringComparison.Ordinal))
+        if (!string.Equals(message.documentId, _sessionState.CurrentDocumentId, StringComparison.Ordinal))
         {
-            Debug.LogWarning($"DocumentManager: ignoring document-page for non-active document '{message.documentId}'. Active='{_currentDocumentId}'.");
+            Debug.LogWarning($"DocumentManager: ignoring document-page for non-active document '{message.documentId}'. Active='{_sessionState.CurrentDocumentId}'.");
             return;
         }
 
-        if (message.pageIndex < 0 || (_totalPages > 0 && message.pageIndex >= _totalPages))
+        if (message.pageIndex < 0 || (_sessionState.TotalPages > 0 && message.pageIndex >= _sessionState.TotalPages))
         {
-            Debug.LogWarning($"DocumentManager: ignoring out-of-range page index {message.pageIndex} for totalPages={_totalPages}.");
+            Debug.LogWarning($"DocumentManager: ignoring out-of-range page index {message.pageIndex} for totalPages={_sessionState.TotalPages}.");
             return;
         }
 
@@ -195,10 +179,10 @@ public class DocumentManager : MonoBehaviour
         if (assembly.ReceivedChunks < assembly.TotalChunks)
             return;
 
-        var assembledBytes = AssembleBytes(assembly.Chunks);
+        var assembledBytes = PageByteAssembler.AssembleChunks(assembly.Chunks);
         _pageAssemblies.Remove(assemblyKey);
 
-        _currentPageIndex = assembly.PageIndex;
+        _sessionState.CurrentPageIndex = assembly.PageIndex;
 
         if (pdfPageDisplay != null)
             pdfPageDisplay.ShowFromBytes(assembledBytes, assembly.Width, assembly.Height);
@@ -207,7 +191,7 @@ public class DocumentManager : MonoBehaviour
 
         var completedMessage = new DocumentPageMessage
         {
-            documentId = _currentDocumentId,
+            documentId = _sessionState.CurrentDocumentId,
             pageIndex = assembly.PageIndex,
             totalPages = assembly.TotalPages,
             width = assembly.Width,
@@ -228,9 +212,9 @@ public class DocumentManager : MonoBehaviour
             return;
         }
 
-        if (_isDocumentOpen && !string.Equals(message.documentId, _currentDocumentId, StringComparison.Ordinal))
+        if (_sessionState.IsDocumentOpen && !string.Equals(message.documentId, _sessionState.CurrentDocumentId, StringComparison.Ordinal))
         {
-            Debug.LogWarning($"DocumentManager: ignoring document-close for non-active document '{message.documentId}'. Active='{_currentDocumentId}'.");
+            Debug.LogWarning($"DocumentManager: ignoring document-close for non-active document '{message.documentId}'. Active='{_sessionState.CurrentDocumentId}'.");
             return;
         }
 
@@ -271,31 +255,13 @@ public class DocumentManager : MonoBehaviour
 
     }
 
-    private static byte[] AssembleBytes(byte[][] chunks)
-    {
-        var totalLength = 0;
-        for (var i = 0; i < chunks.Length; i++)
-            totalLength += chunks[i].Length;
-
-        var combined = new byte[totalLength];
-        var offset = 0;
-        for (var i = 0; i < chunks.Length; i++)
-        {
-            var chunk = chunks[i];
-            Buffer.BlockCopy(chunk, 0, combined, offset, chunk.Length);
-            offset += chunk.Length;
-        }
-
-        return combined;
-    }
-
     private void ResetDocumentState()
     {
-        _isDocumentOpen = false;
-        _currentDocumentId = null;
-        _currentDocumentName = null;
-        _totalPages = 0;
-        _currentPageIndex = -1;
+        _sessionState.IsDocumentOpen = false;
+        _sessionState.CurrentDocumentId = null;
+        _sessionState.CurrentDocumentName = null;
+        _sessionState.TotalPages = 0;
+        _sessionState.CurrentPageIndex = -1;
     }
 
     private void OnDestroy()
