@@ -43,7 +43,7 @@ public class DocumentManagerTests
     }
 
     [Test]
-    public void HandleMessage_DocumentPage_ForActiveDocument_InvokesPageEventAndUpdatesCurrentPage()
+    public void HandleMessage_DocumentPage_RequiresAllChunksBeforeEvent()
     {
         const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
         _manager.HandleMessage(startJson);
@@ -51,16 +51,63 @@ public class DocumentManagerTests
         DocumentPageMessage observed = null;
         _manager.OnDocumentPage += msg => observed = msg;
 
-        const string pageJson = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQID\"}";
-        _manager.HandleMessage(pageJson);
+        const string chunk0 = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQI=\"}";
+        _manager.HandleMessage(chunk0);
+
+        Assert.IsNull(observed);
+
+        const string chunk1 = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":1,\"totalChunks\":2,\"data\":\"AwQ=\"}";
+        _manager.HandleMessage(chunk1);
 
         Assert.NotNull(observed);
         Assert.AreEqual("doc-123", observed.documentId);
         Assert.AreEqual(1, observed.pageIndex);
-        Assert.AreEqual(2, observed.totalChunks);
-        CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, observed.data);
-
+        Assert.AreEqual(1, observed.totalChunks);
+        CollectionAssert.AreEqual(new byte[] { 1, 2, 3, 4 }, observed.data);
         Assert.AreEqual(1, _manager.CurrentPageIndex);
+    }
+
+    [Test]
+    public void HandleMessage_DocumentPage_OutOfOrderChunks_AssemblesCorrectly()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
+        _manager.HandleMessage(startJson);
+
+        DocumentPageMessage observed = null;
+        _manager.OnDocumentPage += msg => observed = msg;
+
+        const string chunk1 = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":2,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":1,\"totalChunks\":2,\"data\":\"AwQ=\"}";
+        const string chunk0 = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":2,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQI=\"}";
+
+        _manager.HandleMessage(chunk1);
+        Assert.IsNull(observed);
+
+        _manager.HandleMessage(chunk0);
+
+        Assert.NotNull(observed);
+        CollectionAssert.AreEqual(new byte[] { 1, 2, 3, 4 }, observed.data);
+        Assert.AreEqual(2, observed.pageIndex);
+    }
+
+    [Test]
+    public void HandleMessage_DuplicateChunk_DoesNotDoubleCount()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
+        _manager.HandleMessage(startJson);
+
+        var pageEventCount = 0;
+        _manager.OnDocumentPage += _ => pageEventCount++;
+
+        const string chunk0 = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":3,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQI=\"}";
+        const string chunk0dup = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":3,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"BQY=\"}";
+        const string chunk1 = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":3,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":1,\"totalChunks\":2,\"data\":\"AwQ=\"}";
+
+        _manager.HandleMessage(chunk0);
+        _manager.HandleMessage(chunk0dup);
+        _manager.HandleMessage(chunk1);
+
+        Assert.AreEqual(1, pageEventCount);
+        Assert.AreEqual(3, _manager.CurrentPageIndex);
     }
 
     [Test]
@@ -72,7 +119,7 @@ public class DocumentManagerTests
         var pageCalled = false;
         _manager.OnDocumentPage += _ => pageCalled = true;
 
-        const string pageJson = "{\"type\":\"document-page\",\"documentId\":\"doc-OTHER\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQID\"}";
+        const string pageJson = "{\"type\":\"document-page\",\"documentId\":\"doc-OTHER\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":1,\"data\":\"AQI=\"}";
         _manager.HandleMessage(pageJson);
 
         Assert.IsFalse(pageCalled);

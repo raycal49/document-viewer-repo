@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using Unity.WebRTC;
@@ -8,6 +9,7 @@ using UnityEngine;
 public class DocumentManager : MonoBehaviour
 {
     [SerializeField] private PdfPageDisplay pdfPageDisplay;
+    [SerializeField] private float chunkAssemblyTimeoutSeconds = 15f;
 
     public event Action<DocumentStartMessage> OnDocumentStart;
     public event Action<DocumentPageMessage> OnDocumentPage;
@@ -19,12 +21,26 @@ public class DocumentManager : MonoBehaviour
     public int TotalPages => _totalPages;
     public int CurrentPageIndex => _currentPageIndex;
 
+    private readonly Dictionary<string, PageAssemblyState> _pageAssemblies = new Dictionary<string, PageAssemblyState>();
+
     private RTCDataChannel _dataChannel;
     private bool _isDocumentOpen;
     private string _currentDocumentId;
     private string _currentDocumentName;
     private int _totalPages;
     private int _currentPageIndex = -1;
+
+    private sealed class PageAssemblyState
+    {
+        public int PageIndex;
+        public int TotalPages;
+        public int Width;
+        public int Height;
+        public int TotalChunks;
+        public byte[][] Chunks;
+        public int ReceivedChunks;
+        public float CreatedAt;
+    }
 
     public void HandleDataChannel(RTCDataChannel channel, ConcurrentQueue<string> documentQueue)
     {
@@ -45,6 +61,8 @@ public class DocumentManager : MonoBehaviour
 
     public void HandleMessage(string json)
     {
+        CleanupExpiredAssemblies();
+
         if (string.IsNullOrWhiteSpace(json))
             return;
 
@@ -100,6 +118,7 @@ public class DocumentManager : MonoBehaviour
         _totalPages = Mathf.Max(0, message.totalPages);
         _currentPageIndex = _totalPages > 0 ? 0 : -1;
 
+        ClearAssembliesForCurrentDocument();
         OnDocumentStart?.Invoke(message);
     }
 
@@ -129,20 +148,76 @@ public class DocumentManager : MonoBehaviour
             return;
         }
 
-        if (message.data == null || message.data.Length == 0)
+        if (message.totalChunks <= 0 || message.chunkIndex < 0 || message.chunkIndex >= message.totalChunks)
         {
-            Debug.LogWarning("DocumentManager: ignoring document-page with empty image payload.");
+            Debug.LogWarning($"DocumentManager: ignoring invalid chunk metadata chunkIndex={message.chunkIndex}, totalChunks={message.totalChunks}.");
             return;
         }
 
-        _currentPageIndex = message.pageIndex;
+        if (message.data == null || message.data.Length == 0)
+        {
+            Debug.LogWarning("DocumentManager: ignoring document-page with empty chunk payload.");
+            return;
+        }
+
+        var assemblyKey = BuildAssemblyKey(message.documentId, message.pageIndex);
+        if (!_pageAssemblies.TryGetValue(assemblyKey, out var assembly))
+        {
+            assembly = new PageAssemblyState
+            {
+                PageIndex = message.pageIndex,
+                TotalPages = message.totalPages,
+                Width = message.width,
+                Height = message.height,
+                TotalChunks = message.totalChunks,
+                Chunks = new byte[message.totalChunks][],
+                CreatedAt = Time.realtimeSinceStartup
+            };
+            _pageAssemblies[assemblyKey] = assembly;
+        }
+
+        if (assembly.TotalChunks != message.totalChunks)
+        {
+            Debug.LogWarning($"DocumentManager: chunk count mismatch for page {message.pageIndex}; resetting assembly.");
+            _pageAssemblies.Remove(assemblyKey);
+            return;
+        }
+
+        if (assembly.Chunks[message.chunkIndex] != null)
+        {
+            Debug.Log($"DocumentManager: duplicate chunk ignored for page={message.pageIndex}, chunk={message.chunkIndex}.");
+            return;
+        }
+
+        assembly.Chunks[message.chunkIndex] = message.data;
+        assembly.ReceivedChunks++;
+
+        if (assembly.ReceivedChunks < assembly.TotalChunks)
+            return;
+
+        var assembledBytes = AssembleBytes(assembly.Chunks);
+        _pageAssemblies.Remove(assemblyKey);
+
+        _currentPageIndex = assembly.PageIndex;
 
         if (pdfPageDisplay != null)
-            pdfPageDisplay.ShowFromBytes(message.data, message.width, message.height);
+            pdfPageDisplay.ShowFromBytes(assembledBytes, assembly.Width, assembly.Height);
         else
             Debug.LogWarning("DocumentManager: PdfPageDisplay is not assigned; skipping render.");
 
-        OnDocumentPage?.Invoke(message);
+        var completedMessage = new DocumentPageMessage
+        {
+            documentId = _currentDocumentId,
+            pageIndex = assembly.PageIndex,
+            totalPages = assembly.TotalPages,
+            width = assembly.Width,
+            height = assembly.Height,
+            chunkIndex = 0,
+            totalChunks = 1,
+            data = assembledBytes
+        };
+
+        OnDocumentPage?.Invoke(completedMessage);
     }
 
     private void HandleDocumentClose(DocumentCloseMessage message)
@@ -160,7 +235,58 @@ public class DocumentManager : MonoBehaviour
         }
 
         ResetDocumentState();
+        ClearAssembliesForCurrentDocument();
         OnDocumentClose?.Invoke(message);
+    }
+
+    private static string BuildAssemblyKey(string documentId, int pageIndex)
+    {
+        return $"{documentId}:{pageIndex}";
+    }
+
+    private void ClearAssembliesForCurrentDocument()
+    {
+        _pageAssemblies.Clear();
+    }
+
+    private void CleanupExpiredAssemblies()
+    {
+        if (_pageAssemblies.Count == 0)
+            return;
+
+        var now = Time.realtimeSinceStartup;
+        var expiredKeys = new List<string>();
+
+        foreach (var pair in _pageAssemblies)
+        {
+            if (now - pair.Value.CreatedAt > chunkAssemblyTimeoutSeconds)
+                expiredKeys.Add(pair.Key);
+        }
+
+        foreach (var key in expiredKeys)
+        {
+            _pageAssemblies.Remove(key);
+            Debug.LogWarning($"DocumentManager: dropped stale chunk assembly '{key}'.");
+        }
+
+    }
+
+    private static byte[] AssembleBytes(byte[][] chunks)
+    {
+        var totalLength = 0;
+        for (var i = 0; i < chunks.Length; i++)
+            totalLength += chunks[i].Length;
+
+        var combined = new byte[totalLength];
+        var offset = 0;
+        for (var i = 0; i < chunks.Length; i++)
+        {
+            var chunk = chunks[i];
+            Buffer.BlockCopy(chunk, 0, combined, offset, chunk.Length);
+            offset += chunk.Length;
+        }
+
+        return combined;
     }
 
     private void ResetDocumentState()

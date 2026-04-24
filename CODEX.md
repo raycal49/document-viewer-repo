@@ -276,7 +276,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 | US-13 | Quest navigation controls over data channel | — |
 | US-14 | Texture lifecycle + loading + errors | — |
 | US-15 | Dedicated `documents` data channel | ✅ Done |
-| US-16 | Chunk reassembly + JPEG decode | — |
+| US-16 | Chunk reassembly + JPEG decode | ✅ Done |
 | US-17 | Page cache ±1 eviction | — |
 | US-18 | World Space Canvas UI overlay | — |
 | US-19 | Click-to-jump page input | — |
