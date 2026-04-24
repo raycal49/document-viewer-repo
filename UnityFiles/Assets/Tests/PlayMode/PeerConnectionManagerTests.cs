@@ -85,4 +85,91 @@ public class PeerConnectionManagerTests
 
         yield break;
     }
+
+    [UnityTest]
+    public IEnumerator SetupPeerConnection_WithValidIceConfig_CreatesSeparateAnnotationAndDocumentsChannels()
+    {
+        try
+        {
+            var probe = new RTCConfiguration
+            {
+                iceServers = new[] { new RTCIceServer { urls = new[] { "stun:stun.l.google.com:19302" } } }
+            };
+            using var c = new RTCPeerConnection(ref probe);
+            c.Close();
+        }
+        catch (Exception ex)
+        {
+            Assert.Ignore($"Skipped: native WebRTC is not available in this environment. ({ex.Message})");
+            yield break;
+        }
+
+        var iceConfig = new IceConfigResponse
+        {
+            iceServers = new[]
+            {
+                new IceServerData
+                {
+                    urls       = new[] { "stun:stun.l.google.com:19302" },
+                    username   = string.Empty,
+                    credential = string.Empty
+                }
+            }
+        };
+
+        _manager.SetupPeerConnection(iceConfig);
+
+        Assert.NotNull(_manager.AnnotationChannel);
+        Assert.NotNull(_manager.DocumentsChannel);
+        Assert.AreNotSame(_manager.AnnotationChannel, _manager.DocumentsChannel);
+
+        Assert.AreEqual("annotations", _manager.AnnotationChannel.Label);
+        Assert.AreEqual("documents", _manager.DocumentsChannel.Label);
+
+        yield break;
+    }
+
+
+    [UnityTest]
+    public IEnumerator Disconnect_AfterSetup_ClearsDocumentsChannel()
+    {
+        try
+        {
+            var probe = new RTCConfiguration
+            {
+                iceServers = new[] { new RTCIceServer { urls = new[] { "stun:stun.l.google.com:19302" } } }
+            };
+            using var c = new RTCPeerConnection(ref probe);
+            c.Close();
+        }
+        catch (Exception ex)
+        {
+            Assert.Ignore($"Skipped: native WebRTC is not available in this environment. ({ex.Message})");
+            yield break;
+        }
+
+        var iceConfig = new IceConfigResponse
+        {
+            iceServers = new[]
+            {
+                new IceServerData
+                {
+                    urls       = new[] { "stun:stun.l.google.com:19302" },
+                    username   = string.Empty,
+                    credential = string.Empty
+                }
+            }
+        };
+
+        _manager.SetupPeerConnection(iceConfig);
+        Assert.NotNull(_manager.DocumentsChannel);
+
+        _manager.Disconnect();
+
+        Assert.IsNull(_manager.DocumentsChannel);
+        Assert.IsFalse(_manager.IsReady);
+
+        yield break;
+    }
+
 }
