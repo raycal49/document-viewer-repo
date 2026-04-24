@@ -22,7 +22,7 @@ public class DocumentManagerTests
     }
 
     [Test]
-    public void HandleMessage_DocumentStart_InvokesStartEvent()
+    public void HandleMessage_DocumentStart_InvokesStartEventAndUpdatesState()
     {
         DocumentStartMessage observed = null;
         _manager.OnDocumentStart += msg => observed = msg;
@@ -34,35 +34,71 @@ public class DocumentManagerTests
         Assert.AreEqual("doc-123", observed.documentId);
         Assert.AreEqual("Transformer Manual", observed.documentName);
         Assert.AreEqual(12, observed.totalPages);
+
+        Assert.IsTrue(_manager.IsDocumentOpen);
+        Assert.AreEqual("doc-123", _manager.CurrentDocumentId);
+        Assert.AreEqual("Transformer Manual", _manager.CurrentDocumentName);
+        Assert.AreEqual(12, _manager.TotalPages);
+        Assert.AreEqual(0, _manager.CurrentPageIndex);
     }
 
     [Test]
-    public void HandleMessage_DocumentPage_InvokesPageEvent()
+    public void HandleMessage_DocumentPage_ForActiveDocument_InvokesPageEventAndUpdatesCurrentPage()
     {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
+        _manager.HandleMessage(startJson);
+
         DocumentPageMessage observed = null;
         _manager.OnDocumentPage += msg => observed = msg;
 
-        const string json = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQID\"}";
-        _manager.HandleMessage(json);
+        const string pageJson = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQID\"}";
+        _manager.HandleMessage(pageJson);
 
         Assert.NotNull(observed);
         Assert.AreEqual("doc-123", observed.documentId);
         Assert.AreEqual(1, observed.pageIndex);
         Assert.AreEqual(2, observed.totalChunks);
         CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, observed.data);
+
+        Assert.AreEqual(1, _manager.CurrentPageIndex);
     }
 
     [Test]
-    public void HandleMessage_DocumentClose_InvokesCloseEvent()
+    public void HandleMessage_DocumentPage_ForWrongDocument_IsIgnored()
     {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
+        _manager.HandleMessage(startJson);
+
+        var pageCalled = false;
+        _manager.OnDocumentPage += _ => pageCalled = true;
+
+        const string pageJson = "{\"type\":\"document-page\",\"documentId\":\"doc-OTHER\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQID\"}";
+        _manager.HandleMessage(pageJson);
+
+        Assert.IsFalse(pageCalled);
+        Assert.AreEqual(0, _manager.CurrentPageIndex);
+    }
+
+    [Test]
+    public void HandleMessage_DocumentClose_InvokesCloseEventAndClearsState()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
+        _manager.HandleMessage(startJson);
+
         DocumentCloseMessage observed = null;
         _manager.OnDocumentClose += msg => observed = msg;
 
-        const string json = "{\"type\":\"document-close\",\"documentId\":\"doc-123\"}";
-        _manager.HandleMessage(json);
+        const string closeJson = "{\"type\":\"document-close\",\"documentId\":\"doc-123\"}";
+        _manager.HandleMessage(closeJson);
 
         Assert.NotNull(observed);
         Assert.AreEqual("doc-123", observed.documentId);
+
+        Assert.IsFalse(_manager.IsDocumentOpen);
+        Assert.IsNull(_manager.CurrentDocumentId);
+        Assert.IsNull(_manager.CurrentDocumentName);
+        Assert.AreEqual(0, _manager.TotalPages);
+        Assert.AreEqual(-1, _manager.CurrentPageIndex);
     }
 
     [Test]

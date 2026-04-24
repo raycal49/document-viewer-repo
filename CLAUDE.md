@@ -266,7 +266,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 | US-03 | Bootstrap render path (bytes-only) | 🔄 Revised |
 | US-04 | Document channel DTO set | — |
 | US-05 | Data-channel dispatch | ✅ Done |
-| US-06 | Connect to `DocumentManager` | — |
+| US-06 | Connect to `DocumentManager` | ✅ Done |
 | US-07 | Editor harness for chunk flow | — |
 | US-08 | Aspect-ratio-aware Quad sizing | — |
 | US-09 | First-show placement in front of head | — |
