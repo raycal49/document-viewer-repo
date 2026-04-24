@@ -2,62 +2,87 @@
 
 ## What we're building
 
-A field technician wearing a Quest 3 headset is on a call with an expert at HQ using the web app. The expert pulls up a PDF (design/repair manual) from Azure storage, and both people see the same page — the Quest user in AR, the web user in-browser. Either side can flip forward/backward; the other side follows. The Quest user decides where the document hangs in their physical space.
+A field technician wearing a Quest 3 headset is on a call with an expert at HQ using the web app. The expert pulls up a PDF (design/repair manual) from Azure storage, and both people can view and navigate it. The Quest user sees the document on a world-locked Quad in AR and can place it in physical space.
 
-There is no PDF support, no Azure Blob integration, and no in-headset 2D UI pattern in the codebase today. Most of the plumbing (HTTP client, WebSocket signaling, RenderTexture-on-a-Quad, Meta XR Interaction SDK) is already present.
+For v1, the document path is **PDF-only** and **peer-to-peer page transport** (web → Quest over WebRTC data channel). The backend remains in the loop for document listing and signaling, but not for page-image delivery.
 
 ---
 
 ## Architecture
 
-### Rasterization: server-side (Option A — chosen)
+### Page transport and rasterization (chosen)
 
-Unity cannot render PDF natively. The existing cloud-deployed backend converts PDF to PNG images per page; Unity downloads them as textures via `UnityWebRequest`. This reuses the existing `UnityWebRequest` pattern, avoids Unity-side PDF libraries and IL2CPP/license issues, and is cheap on Quest CPU.
+- **Web app** downloads source PDFs from Azure Blob and rasterizes pages locally using `pdf.js`.
+- Web app streams rendered pages to Quest over a **dedicated `documents` WebRTC data channel** (separate from annotations channel).
+- Each page is JPEG, base64-encoded, chunked (~16 KB per chunk), and reassembled on Quest.
+- **Quest no longer fetches page URLs** for normal operation.
 
 ### Storage (Azure Blob)
 
-- Private container(s) — one for source PDFs, one for rasterized page PNGs (or `documents/{id}/page-{n}.png`).
-- Access via short-lived SAS URLs minted by the backend. Never hand blob keys to the Quest or the browser.
+- Private container for source PDFs.
+- No required v1 container for server-generated rasterized pages.
+- Access control remains server-managed; clients do not receive account keys.
 
 ### Backend (`ar-signalingserver.azurewebsites.net`)
 
-Rasterization lives here (not a separate Azure Function). When a PDF is uploaded or listed and not yet rasterized, the app shells out to `pdftoppm` (poppler) or uses a .NET lib like PdfPig to produce page PNGs and writes them back to Blob.
+Backend responsibilities for v1:
+- `GET /documents` — list available docs `{ id, title, pageCount, thumbnailUrl? }`
+- Signaling broker for WebRTC setup (existing role)
 
-New endpoints:
-- `GET /documents` — list available docs `{ id, title, pageCount, thumbnailUrl }`
-- `GET /documents/{id}/pages/{n}` — returns SAS URL (or 302) to that page PNG
-- `POST /documents/select` — accepts `{ documentId, page }` from either client; server records state and fans out via Web PubSub to both peers
-- `POST /documents/upload` (later) — accept PDF, trigger rasterization
+Removed from v1 backend scope:
+- Server-side rasterization pipeline
+- `GET /documents/{id}/pages/{n}` page-image endpoint
+- `POST /documents/select` server-owned page sync
+- SAS page URL minting for Quest image fetch path
 
-### Signaling (WebSocket — already wired)
+### Signaling and data channels
 
-One new JSON message type, broadcast server → both peers:
+WebSocket signaling remains for connection establishment. Document interaction payloads move to the `documents` data channel.
 
-```json
-{ "type": "document.show", "documentId": "...", "page": 0, "totalPages": 12, "pageUrl": "<SAS URL>" }
-```
+Inbound to Quest (from web):
+- `DocumentStartMessage { documentId, documentName, totalPages }`
+- `DocumentPageMessage { documentId, pageIndex, totalPages, width, height, chunkIndex, totalChunks, data }`
+- `DocumentCloseMessage { documentId }`
 
-Page changes reuse the same message. The server is the source of truth for current page — last write wins, both clients re-sync from the broadcast.
+Outbound from Quest (to web):
+- `DocumentRequestPageMessage { documentId, pageIndex }`
+- `DocumentNavigateMessage { documentId, pageIndex, source }`
+
+### State model
+
+- Each side maintains its own current-page state.
+- Default behavior: Quest follows expert navigation.
+- Either side can disable follow and browse independently.
+- Navigation sync is peer-to-peer via data channel messages (no server-owned canonical page).
 
 ### Unity (Quest) side
 
-New `PdfPageDisplay.cs` MonoBehaviour that:
-- Owns a Quad with an `Unlit/Texture` material.
-- On `document.show`, downloads the PNG via `UnityWebRequestTexture`, assigns it to the material, resizes the Quad to the page aspect ratio.
-- On first show, places the Quad ~1.5m in front of the user's head, then stops following (virtual whiteboard behavior).
-- Is grabbable/movable by the Quest user via Meta XR Interaction SDK `Grabbable` / `HandGrabInteractable`. Position persists for the session (no Spatial Anchors needed for v1).
+- `PdfPageDisplay` owns Quad + material and renders decoded bytes with:
+  - `ShowFromBytes(byte[] jpegBytes, int width, int height)`
+- `DocumentManager` owns:
+  - chunk reassembly
+  - page cache and eviction
+  - routing decoded data to `PdfPageDisplay`
+- Main-thread handoff uses the existing `ConcurrentQueue<string>` pattern already used by WebRTC code.
+- UI is a World Space Canvas parented to the Quad:
+  - document title
+  - `TMP_InputField` page jump (`X / Y`)
+  - Prev / Next
+  - Follow toggle
 
-Quest-side page nav: two 3D buttons (small Quads or cubes with `PokeInteractable` or controller raycast) parented near the Quad. On press, POST to `/documents/select` — server re-broadcasts and both sides update.
+### Memory / VRAM strategy
 
-Pattern to copy from: `Assets/Scripts/Camera/VideoCompositor.cs` (RenderTexture-to-Quad). For grab/button interactions: Meta XR Interaction SDK samples in Packages.
+- Cache target: current page ±1.
+- Destroy textures when evicted.
+- Prefer lazy page loading for large PDFs:
+  - Quest requests page N (`document-request-page`), web streams that page.
 
 ### Web app side
 
-New `DocumentPicker.tsx` component:
-- Lists docs from `GET /documents` with thumbnails.
-- Prev/next page buttons once a doc is selected.
-- Each action POSTs to `/documents/select`.
-- Displays the same PNG the Quest is seeing (subscribed to `document.show`).
+- Keep `DocumentPicker.tsx` for listing/selecting docs.
+- Add `pdf.js` page render pipeline.
+- Add chunked sender for `document-start/page/close` messages.
+- Honor peer backpressure (`RTCDataChannel.bufferedAmount`) to avoid runaway queue growth.
 
 ---
 
@@ -65,53 +90,44 @@ New `DocumentPicker.tsx` component:
 
 | Topic | Decision |
 |---|---|
-| Page sync | Either side can flip; server owns current state and fans out. Same view on both. |
-| Users | 1 Quest + 1 web. No multi-party concerns. |
-| Annotations on PDF | Out of scope for v1. `AnnotationRenderer` stays video-only. |
-| Placement | Quest user grabs and places the PDF; persists for the session. No Spatial Anchors (cross-session is out of scope). |
-| Page count | No hard limit. Lazy-load pages on demand (one PNG per `document.show`). |
-| Zoom / pan | Not implemented. "Walk closer" is the zoom UX. |
-| Rasterization host | Existing cloud backend, not a separate Azure Function. |
+| Transport | Web rasterizes PDF pages and streams JPEG chunks over dedicated WebRTC `documents` data channel. |
+| Format scope | PDF-only for v1. |
+| Page sync | Independent local page state with follow toggle; no server-owned current page. |
+| Users | 1 Quest + 1 web. No multi-party concerns in v1. |
+| Placement | Quest user grabs and places the PDF; persists for session only. |
+| Zoom / pan | Not implemented in v1; user walks closer. |
+| Backend role | Document list + signaling broker only; out of page-image path. |
 
 ---
 
-## Unity-side assumptions (dev in isolation)
+## Suggested phased build order
 
-Unity is being built ahead of the backend and web app. Two assumptions keep this safe:
+1. **Phase 1 — Documents channel scaffold + byte render path**
+   - Open dedicated `documents` channel.
+   - Hardcoded test payload renders through `ShowFromBytes`.
+2. **Phase 2 — Web chunked stream from pdf.js**
+   - Send `document-start/page/close` from web.
+   - Quest reassembly and decode.
+3. **Phase 3 — Bidirectional navigation + follow toggle**
+   - `document-navigate` and `document-request-page` flows.
+   - Independent page state behavior.
+4. **Phase 4 — Quest document UI polish**
+   - Canvas overlay, title, prev/next, jump-to-page input.
+5. **Phase 5 — XR interaction integration**
+   - Grab-and-place behaviors with Meta XR SDK.
+6. **Phase 6 — Library hardening and resilience**
+   - `GET /documents` production handling, error states, backpressure tuning, cache/eviction validation.
 
-**Format-agnostic input.** Unity only ever sees PNG URLs — never the source file. The server-side rasterization layer turns PDFs, TIFFs, DOCX, scanned images, etc. into PNGs. Treat `pageUrl` as opaque: don't assume `.png`, don't parse it, don't check the host. `UnityWebRequestTexture` just fetches and renders whatever URL arrives. Realistic source formats the backend will need to handle for utility-station work: PDF (~90% — OEM manuals from ABB/Siemens/GE/Eaton, IEEE/IEC standards), multi-page TIFF (scanned legacy manuals), PNG/JPG (nameplate photos, wiring diagrams, single-page references), DOCX (work instructions, checklists). Adding any of these is a backend-only change.
-
-**Isolation contract.** Until the web app exists, Unity is driven by fakes:
-- US-03 hardcoded `_testUrl` — proves rendering without any signaling.
-- US-07 Editor harness — fires fake `OnDocumentShow` events directly into `SignalingClient`.
-- US-13's POST — point at `httpbin.org/post` or a local echo server until `/documents/select` is live.
-
-The contract between Unity and the outside world is just two messages:
-- **In:** `DocumentShowMessage` JSON over the existing WebSocket.
-- **Out:** `POST /documents/select` with `{ documentId, page }`.
-
-Any backend satisfying those two contracts can drive the client.
-
----
-
-## Suggested build order
-
-1. **Hello-PDF, no infrastructure.** Manually rasterize one PDF, drop PNGs in a public Blob container, hardcode a URL in Unity, get a Quad showing page 1. No backend changes, no web, no signaling.
-2. **Lock down storage + backend endpoints.** Private container, `GET /documents` + page endpoint with SAS URLs. Unity fetches via backend.
-3. **Signaling + two-way paging.** Add `document.show` broadcast and `POST /documents/select`. Wire both web prev/next and Quest prev/next.
-4. **Web picker.** Build `DocumentPicker.tsx`. End-to-end flow for pre-rasterized PDFs.
-5. **Grab & place on Quest.** Add `Grabbable` to the Quad so the tech can position the manual.
-6. **Upload + auto-rasterize.** Add `POST /documents/upload` with `pdftoppm`/PdfPig inside the existing app.
-
-Each milestone is shippable on its own — don't build them in parallel.
+Each phase should remain shippable and independently demoable.
 
 ---
 
 ## Risks to watch
 
-- **Meta XR Interaction SDK ergonomics.** No prior 3D UI in the codebase. Budget spike time before committing to grab and poke-button stories.
-- **Page image sizing.** Rasterize at ~1800×2400 per letter page. Too big wastes bandwidth; too small looks blurry when the tech walks up to it.
-- **SAS URL expiry during long sessions.** Mint fresh URLs per broadcast, not per list. A URL minted at list time will expire before a 20-min session ends.
+- **Data-channel backpressure:** unmanaged send rate can stall peers or spike memory. Gate send loop with `bufferedAmount` thresholds.
+- **VRAM pressure on Quest:** page churn can leak textures without strict eviction/destruction.
+- **Expert-side network instability:** architecture assumes expert web client has adequate connectivity; define degraded behavior if not.
+- **Meta XR interaction ergonomics:** first real use of grab + in-world controls in this repo.
 
 ---
 
@@ -119,134 +135,124 @@ Each milestone is shippable on its own — don't build them in parallel.
 
 | File | Why it matters |
 |---|---|
-| `UnityFiles/Assets/Scripts/Network/SignalingHttpClient.cs` | Pattern for new `POST /documents/select` call |
-| `UnityFiles/Assets/Scripts/Network/SignalingClient.cs` | Where to add the `document.show` handler |
-| `UnityFiles/Assets/Scripts/Camera/VideoCompositor.cs` | Pattern for displaying a texture on a 3D surface |
-| `UnityFiles/Assets/Scripts/Models/Dtos.cs` | Where the new message DTO lives |
-| `WebApp/src/components/` | Where `DocumentPicker.tsx` will live |
-| Meta XR Interaction SDK (Packages) | `Grabbable` / `PokeInteractable` for placing and paging the Quad |
+| `UnityFiles/Assets/Scripts/Network/PeerConnectionManager.cs` | Add/host dedicated `documents` data channel and callbacks |
+| `UnityFiles/Assets/Scripts/Network/WebRTCSender.cs` | Existing `ConcurrentQueue` threading pattern to reuse |
+| `UnityFiles/Assets/Scripts/Camera/VideoCompositor.cs` | Pattern for displaying texture content on 3D surface |
+| `UnityFiles/Assets/Scripts/Models/Dtos.cs` | Home for document channel DTOs |
+| `WebApp/src/components/DocumentPicker.tsx` | Existing document selection UX entry point |
 
 ---
 
-## Testing philosophy
+## Testing philosophy (updated for data-channel architecture)
 
-Tests on the Unity client exist to receive feedback from code whose health we care about — not to validate every line. The cost of a test must be less than the cost of the thing being tested. No test sprawl; no interface-and-mock towers dwarfing the production code.
+Testing stays pragmatic: validate high-risk logic and state transitions, avoid expensive mock-heavy coverage for thin wiring.
 
-The Unity Test Framework is already wired up in this project: `Assets/Tests/EditMode/` (e.g. `IceCandidateParserTests.cs`, `SignalingMessageTests.cs`) and `Assets/Tests/PlayMode/` (e.g. `SignalingClientTests.cs`). New tests live alongside the existing ones and use NUnit in the same style.
+**What changed with the new architecture:**
+- Focus shifts from HTTP endpoint wrappers to:
+  - chunk reassembly correctness
+  - navigation/follow state transitions
+  - cache eviction and texture lifecycle
+  - data-channel message parsing/dispatch
 
-**Per-story check, before writing code:**
-1. Is there pure logic here whose silent regression would bite later? (parsing, sizing math, state transitions)
-2. Would a test cost less than writing the thing?
-3. Is this subtle or hot-path enough that manual verification is unreliable?
+**Per-story check before writing tests:**
+1. Is there pure logic/state behavior likely to regress silently?
+2. Is the test cheaper than manual repeated validation?
+3. Does this code carry memory/perf/concurrency risk?
 
-If all three are "no," skip the test. If the code is pure wiring (a one-line `UnityWebRequest` wrapper, a coroutine forwarder), mocking to test it is not worth it.
+If yes to any, add a targeted test.
 
-**Preferred test types, cheapest first:**
-- **EditMode unit tests** — pure C# classes, fastest; preferred wherever possible. Match the style of `SignalingMessageTests.cs`.
-- **PlayMode tests** — when MonoBehaviour lifecycle, coroutines, or runtime behavior is the actual thing under test. Match the style of `SignalingClientTests.cs`.
-- **Manual on-device / Editor verification** — XR hardware, real networking, visual rendering.
+**Preferred test types:**
+- **EditMode tests** for DTO parsing, chunk assembly logic, page-state reducers, eviction math.
+- **PlayMode tests** for MonoBehaviour lifecycle and texture replacement/destruction.
+- **Manual on-device checks** for XR interaction, visual quality, real WebRTC behavior.
 
-**Design for testability, lightly.** Extract pure logic into static methods taking inputs and returning values when it's natural (aspect-ratio sizing, URL construction, DTO parsing). Don't add interfaces just to enable mocking unless the payoff is obvious.
+**Concrete high-value targets in this plan:**
+- Reassembly handles out-of-order chunk arrival and duplicate chunk receipt.
+- Incomplete/missing chunk sets time out cleanly and do not render corrupted textures.
+- Follow toggle state machine (follow-on vs follow-off) behaves deterministically.
+- Cache window (±1) evicts correctly and destroys textures.
+- Data-channel message routing ignores unknown document IDs safely.
 
-**Escape hatch.** If a story has no obvious, cheap test path — implement it, show the implementation to the user, and ask whether it ships untested. Silent no-testing is not okay; explicit-and-approved no-testing is.
-
-**Retroactive assessment of shipped stories:**
-- **US-01** (`PdfPageDisplay` scaffold) — no tests. Nearly all Unity primitives (`CreatePrimitive`, material assignment); a test would mostly verify Unity itself.
-- **US-02** (`TextureDownloader`) — no tests. Thin `UnityWebRequestTexture` wrapper; mocking HTTP would be larger than the helper.
-- **US-03** (hardcoded-URL render) — no tests. The "test" is "press Play and see the Quad," already in the AC.
-
-**Forward-looking candidates worth tests:**
-- **US-04** (`DocumentShowMessage` DTO roundtrip) — trivial `JsonUtility.FromJson` test, exactly like `SignalingMessageTests.cs`. Cheap and worth it.
-- **US-05** (dispatch `document.show`) — fake WebSocket payload, assert event fires with right DTO. Fits `SignalingClientTests.cs` pattern.
-- **US-08** (aspect-ratio sizing) — extract the scale calc as a pure static method; unit-test with portrait/landscape fixtures.
-- **US-14** (texture lifecycle) — destruction/leak behavior is exactly the kind of subtle regression worth catching; PlayMode test possible.
+No mandatory test quota per story; test where risk and ROI justify it.
 
 ---
 
 ## Unity user stories
 
-**Critical finding:** The Meta XR Interaction SDK is imported in `manifest.json` (v85.0) but never used anywhere in the codebase. No `Grabbable`, no `PokeInteractable`, no sample prefabs. Stories US-10 and US-13 are genuinely new ground — a bounded spike (US-10) is required before committing to those estimates.
+### Phase 1 — Byte-render foundation
 
-### Phase 1 — Render a PNG on a Quad (no backend, no signaling)
+**US-01 — `PdfPageDisplay` scaffold** · S · no deps
+- Keep Quad/material foundation and core display ownership.
+- Status: ✅ Done
 
-**US-01 — Create `PdfPageDisplay` scaffold** · S · no deps
-- New MonoBehaviour that spawns a Quad with `Unlit/Texture` material in `Awake` and exposes `Show(Texture2D tex)`.
-- File: `UnityFiles/Assets/Scripts/Display/PdfPageDisplay.cs`
-- AC: `[ContextMenu("Test Show")]` with a `_testTexture` assigned renders the texture on the Quad in Play Mode. ✅ Done (`e75be7e`)
+**US-02 — URL texture helper (legacy/dev utility only)** · S · no deps
+- Keep only if useful for isolated debug tooling.
+- Not part of primary runtime path.
+- Status: ✅ Done
 
-**US-02 — PNG-URL-to-Texture download helper** · S · no deps
-- New static helper `DownloadPngAsync(string url, Action<Texture2D> onReady, Action<string> onError)` wrapping `UnityWebRequestTexture.GetTexture`.
-- File: `UnityFiles/Assets/Scripts/Network/TextureDownloader.cs`
-- AC: Good URL fires `onReady` with valid texture; bad URL fires `onError`. Mirrors error-handling in `SignalingHttpClient.cs:43-46`.
+**US-03 — End-to-end render bootstrap (revise to bytes)** · S · US-01
+- Replace hardcoded URL bootstrap with hardcoded byte payload path through `ShowFromBytes`.
+- Status: ✅ Done conceptually; update implementation as needed.
 
-**US-03 — End-to-end render with hardcoded URL** · S · US-01, US-02
-- Wire US-02 into US-01. Add `[SerializeField] string _testUrl` and `[SerializeField] bool _isDevMode`; on `Start()` (behind the bool) download and display.
-- File: `PdfPageDisplay.cs` (edit)
-- AC: Press Play → hardcoded PNG from Blob appears on the Quad within ~1s on device.
+**US-21 — Add `ShowFromBytes` on `PdfPageDisplay`** · S · US-01
+- `ShowFromBytes(byte[] jpegBytes, int width, int height)` is the primary render API.
 
-### Phase 2 — Wire up the signaling message
+### Phase 2 — Documents data channel and chunk ingest
 
-**US-04 — Add `DocumentShowMessage` DTO** · S · no deps
-- Append `[Serializable] public class DocumentShowMessage` with `string documentId`, `int page`, `int totalPages`, `string pageUrl` to `Dtos.cs`. Match existing style.
-- File: `UnityFiles/Assets/Scripts/Models/Dtos.cs` (append)
-- AC: `JsonUtility.FromJson<DocumentShowMessage>(...)` roundtrips correctly.
+**US-15 — Dedicated `documents` data channel** · S · no deps
+- Add second channel negotiation in `PeerConnectionManager`.
 
-**US-05 — Dispatch `document.show` in `SignalingClient`** · S · US-04
-- Add `case "document.show":` in the message-type switch (~line 178). Declare `public event Action<DocumentShowMessage> OnDocumentShow`. Parse and invoke.
-- File: `UnityFiles/Assets/Scripts/Network/SignalingClient.cs`
-- AC: Fake `document.show` payload fires the event with correct DTO values. Existing message types still work.
+**US-04 — Document channel DTO set** · S · no deps
+- Replace old `DocumentShowMessage` with start/page/close + outbound navigate/request DTOs.
 
-**US-06 — Connect event to display via `WebRTC_Connector`** · S · US-03, US-05
-- Add `[SerializeField] PdfPageDisplay _pdfDisplay` to `WebRTC_Connector.cs`. Subscribe to `OnDocumentShow` and call `_pdfDisplay.ShowFromUrl(msg.pageUrl)`.
-- File: `UnityFiles/Assets/Scripts/Core/WebRTC_Connector.cs`
-- AC: Fake `document.show` via WebSocket updates the Quad end-to-end.
+**US-05 — Dispatch document messages from data channel** · S · US-04, US-15
+- Parse and enqueue on main thread using existing queue pattern.
 
-**US-07 — Editor-only dev harness** · S · US-06
-- Small Editor helper (ContextMenu or Editor window) that fires `OnDocumentShow` without backend.
-- File: `UnityFiles/Assets/Scripts/Editor/PdfTestHarness.cs`
-- AC: Clicking the harness button in Play Mode updates the Quad to a typed URL. Unlocks all further Unity dev from backend dependency.
+**US-06 — `DocumentManager` integration path** · M · US-05, US-21
+- Route incoming messages to reassembly/cache/render pipeline.
 
-### Phase 3 — Place it in AR space
+**US-16 — Chunk reassembly + JPEG decode** · M · US-06
+- Reassemble by `(documentId, pageIndex)` and decode into texture bytes.
 
-**US-08 — Aspect-ratio-aware Quad sizing** · S · US-01
-- On each `Show`, read `texture.width / texture.height` and rescale the Quad (width fixed to 0.8m, height derived).
-- File: `PdfPageDisplay.cs` (edit)
-- AC: Portrait and landscape pages both render without distortion.
+**US-07 — Editor harness for chunk flow** · S · US-16
+- Feed fake start/page chunks into `DocumentManager` without backend/web.
+
+### Phase 3 — Navigation and sync semantics
+
+**US-13 — Quest page controls wired to data channel** · M · US-05
+- Prev/Next/jump send `document-navigate` or `document-request-page`.
+
+**US-19 — `TMP_InputField` click-to-jump** · S · US-13
+- Validate/bounds-clamp input and route through same navigation path.
+
+**US-20 — Follow toggle behavior** · S · US-13
+- Gate whether inbound remote navigation updates local current page.
+
+**US-12 — HTTP navigation helper** · —
+- **Dropped from scope** (no `/documents/select` flow in v1).
+
+### Phase 4 — AR placement and memory hardening
+
+**US-08 — Aspect-ratio-aware sizing** · S · US-21
+- Keep page aspect correct regardless of source page dimensions.
 
 **US-09 — First-show placement in front of head** · S · US-08
-- On first `Show` of a session, position Quad ~1.5m in front of `Camera.main`, then stop following.
-- File: `PdfPageDisplay.cs` (edit)
-- AC: Quad appears directly in front of user on first message; stays in world space after head turns.
+- One-time placement then remain world-locked.
 
-**US-10 — Meta XR Interaction SDK spike (timeboxed, 1 day max)** · M · no deps
-- Throwaway branch/scene only. Get one `PokeInteractable` button logging "pressed" and one `Grabbable` cube working with hand tracking. Write internal "how to add an interactable" note.
-- AC: Personally demonstrate hand-poke and hand-grab on device. Do this before committing to US-11 and US-13 estimates.
+**US-10 — Meta XR interaction spike** · M · no deps
+- Validate grab + poke ergonomics on device.
 
-**US-11 — Grab-and-place the Quad** · M · US-09, US-10
-- Attach `Grabbable` + `HandGrabInteractable` to the PDF Quad. User pinch-grabs, moves, releases — stays in place.
-- Files: Quad prefab; minor edits to `PdfPageDisplay.cs`
-- AC: On device, user places document, releases — it stays. Subsequent page updates don't reset position.
+**US-11 — Grab-and-place Quad** · M · US-09, US-10
+- Parent Canvas with Quad so controls move together.
 
-### Phase 4 — Send page changes back to the server
+**US-14 — Texture lifecycle + loading + errors** · M · US-16
+- Includes strict destroy/replace behavior and user-visible loading/error states.
 
-**US-12 — POST helper in `SignalingHttpClient`** · S · no deps
-- Add `PostJsonAsync<TRequest, TResponse>(string url, TRequest body, ...)` using `UnityWebRequest` with `UploadHandlerRaw` + `DownloadHandlerBuffer`.
-- File: `UnityFiles/Assets/Scripts/Network/SignalingHttpClient.cs` (append)
-- AC: POST to test endpoint returns parsed response; failure fires `onError`.
+**US-17 — Page cache ±1 eviction** · S · US-16, US-14
+- Keep memory bounded and avoid stale texture buildup.
 
-**US-13 — Prev/Next 3D buttons** · M · US-10, US-12
-- Two `PokeInteractable` GameObjects parented to the Quad prefab. Next/Prev bounded by `totalPages`. On press, POST `{ documentId, page }` to `/documents/select`. No optimistic update — wait for server broadcast.
-- Files: `UnityFiles/Assets/Scripts/Display/PageNavButtons.cs`; Quad prefab edits
-- AC: Pressing Next triggers POST → server broadcasts new page → Quad updates. Prev on page 0 and Next on last page are no-ops.
-
-### Phase 5 — Production readiness
-
-**US-14 — Texture lifecycle + loading + errors** · M · US-03, US-06
-- Three concerns in one refactor pass on `PdfPageDisplay.cs`:
-  1. Destroy old texture before assigning new one (avoid per-page memory leak).
-  2. Show placeholder/grey Quad while PNG is downloading.
-  3. Show error texture on `TextureDownloader` failure; log to `Debug.LogError`.
-- AC: Flip through 20 pages quickly — no memory growth in profiler. Disconnect wifi, fire fake message — error texture appears, no crash.
+**US-18 — World Space Canvas document UI** · M · US-11, US-13
+- Title + page indicator + nav controls + follow toggle.
 
 ---
 
@@ -255,16 +261,23 @@ If all three are "no," skip the test. If the code is pure wiring (a one-line `Un
 | ID | Title | Status |
 |---|---|---|
 | US-01 | `PdfPageDisplay` scaffold | ✅ Done |
-| US-02 | PNG-URL-to-Texture download helper | ✅ Done |
-| US-03 | End-to-end render with hardcoded URL | ✅ Done |
-| US-04 | `DocumentShowMessage` DTO | — |
-| US-05 | Dispatch `document.show` in `SignalingClient` | — |
-| US-06 | Connect event to display | — |
-| US-07 | Editor-only dev harness | — |
+| US-02 | URL texture helper (legacy/dev utility) | ✅ Done |
+| US-03 | Bootstrap render path (bytes) | 🔄 Revised |
+| US-04 | Document channel DTO set | — |
+| US-05 | Data-channel dispatch | — |
+| US-06 | Connect to `DocumentManager` | — |
+| US-07 | Editor harness for chunk flow | — |
 | US-08 | Aspect-ratio-aware Quad sizing | — |
 | US-09 | First-show placement in front of head | — |
 | US-10 | Meta XR SDK spike | — |
 | US-11 | Grab-and-place the Quad | — |
-| US-12 | POST helper in `SignalingHttpClient` | — |
-| US-13 | Prev/Next 3D buttons | — |
+| US-12 | HTTP POST helper | ❌ Dropped |
+| US-13 | Quest navigation controls over data channel | — |
 | US-14 | Texture lifecycle + loading + errors | — |
+| US-15 | Dedicated `documents` data channel | — |
+| US-16 | Chunk reassembly + JPEG decode | — |
+| US-17 | Page cache ±1 eviction | — |
+| US-18 | World Space Canvas UI overlay | — |
+| US-19 | Click-to-jump page input | — |
+| US-20 | Follow toggle behavior | — |
+| US-21 | `ShowFromBytes` render API | — |
