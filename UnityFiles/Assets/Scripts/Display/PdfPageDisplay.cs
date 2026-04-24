@@ -2,9 +2,13 @@ using UnityEngine;
 
 public class PdfPageDisplay : MonoBehaviour
 {
-    [SerializeField] private Texture2D _testTexture;
-    [SerializeField] private TextAsset _testJpegBytes;
+    [Header("Dev bootstrap")]
+    [Tooltip("When enabled, the component auto-renders a test source in Start().")]
     [SerializeField] private bool _isDevMode;
+    [Tooltip("Optional Texture2D test source. If assigned, this takes priority in dev mode.")]
+    [SerializeField] private Texture2D _testTexture;
+    [Tooltip("Optional raw JPEG bytes test source (TextAsset). Used when Test Texture is not assigned.")]
+    [SerializeField] private TextAsset _testJpegBytes;
 
     private GameObject _quad;
     private Material _material;
@@ -26,10 +30,24 @@ public class PdfPageDisplay : MonoBehaviour
 
     private void Start()
     {
-        if (_isDevMode && _testJpegBytes != null)
+        if (!_isDevMode)
+        {
+            return;
+        }
+
+        if (_testTexture != null)
+        {
+            Show(_testTexture);
+            return;
+        }
+
+        if (_testJpegBytes != null)
         {
             ShowFromBytes(_testJpegBytes.bytes, 0, 0);
+            return;
         }
+
+        Debug.LogWarning("PdfPageDisplay: Dev mode is enabled but no test source is assigned (Test Texture or Test Jpeg Bytes).");
     }
 
     public void Show(Texture2D tex)
