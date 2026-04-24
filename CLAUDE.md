@@ -142,6 +142,7 @@ Each phase should remain shippable and independently demoable.
 | `UnityFiles/Assets/Scripts/Document/DocumentManager.cs` | Document session orchestration + chunk intake routing |
 | `UnityFiles/Assets/Scripts/Document/DocumentStateModels.cs` | Shared document/session and assembly state models |
 | `UnityFiles/Assets/Scripts/Document/PageByteAssembler.cs` | Pure static chunk-byte assembly utility |
+| `UnityFiles/Assets/Scripts/Debug/DocumentChunkFlowHarness.cs` | Editor harness for start/page/close chunk-flow simulation |
 | `WebApp/src/components/DocumentPicker.tsx` | Existing document selection UX entry point |
 
 ---
@@ -221,6 +222,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 
 **US-07 — Editor harness for chunk flow** · S · US-16
 - Feed fake start/page chunks into `DocumentManager` without backend/web.
+- Implemented as `DocumentChunkFlowHarness` with in-order, out-of-order, duplicate-chunk, close, and full happy-path ContextMenu actions.
 
 ### Phase 3 — Navigation and sync semantics
 
@@ -271,7 +273,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 | US-04 | Document channel DTO set | ✅ Done |
 | US-05 | Data-channel dispatch | ✅ Done |
 | US-06 | Connect to `DocumentManager` | ✅ Done |
-| US-07 | Editor harness for chunk flow | — |
+| US-07 | Editor harness for chunk flow | ✅ Done |
 | US-08 | Aspect-ratio-aware Quad sizing | — |
 | US-09 | First-show placement in front of head | — |
 | US-10 | Meta XR SDK spike | — |
