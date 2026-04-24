@@ -13,7 +13,7 @@ public class WebRTCSender : MonoBehaviour
     [SerializeField] private SignalingClient signalingClient;
     [SerializeField] private PeerConnectionManager peerConnectionManager;
     [SerializeField] private AnnotationManager annotationManager;
-    [SerializeField] private DocumentMessageDispatcher documentMessageDispatcher;
+    [SerializeField] private DocumentManager documentManager;
     [SerializeField] private MicrophoneCapture microphoneCapture;
 
     [Header("Call Button UI")]
@@ -219,10 +219,10 @@ public class WebRTCSender : MonoBehaviour
         else
         {
             Debug.Log("WebRTCSender: Documents data channel is ready.");
-            if (documentMessageDispatcher != null)
-                documentMessageDispatcher.HandleDataChannel(peerConnectionManager.DocumentsChannel, documentQueue);
+            if (documentManager != null)
+                documentManager.HandleDataChannel(peerConnectionManager.DocumentsChannel, documentQueue);
             else
-                Debug.LogWarning("WebRTCSender: DocumentMessageDispatcher is not assigned.");
+                Debug.LogWarning("WebRTCSender: DocumentManager is not assigned.");
         }
 
         // no need for this. keeping here just in case.
@@ -258,7 +258,7 @@ public class WebRTCSender : MonoBehaviour
             while (annotationQueue.TryDequeue(out string json))
                 annotationManager.HandleMessage(json);
             while (documentQueue.TryDequeue(out string documentJson))
-                documentMessageDispatcher?.HandleMessage(documentJson);
+                documentManager?.HandleMessage(documentJson);
 
             yield return null;
         }

@@ -2,16 +2,16 @@ using NUnit.Framework;
 using UnityEngine;
 
 [TestFixture]
-public class DocumentMessageDispatcherTests
+public class DocumentManagerTests
 {
     private GameObject _go;
-    private DocumentMessageDispatcher _dispatcher;
+    private DocumentManager _manager;
 
     [SetUp]
     public void SetUp()
     {
-        _go = new GameObject("DocumentMessageDispatcherTests");
-        _dispatcher = _go.AddComponent<DocumentMessageDispatcher>();
+        _go = new GameObject("DocumentManagerTests");
+        _manager = _go.AddComponent<DocumentManager>();
     }
 
     [TearDown]
@@ -25,10 +25,10 @@ public class DocumentMessageDispatcherTests
     public void HandleMessage_DocumentStart_InvokesStartEvent()
     {
         DocumentStartMessage observed = null;
-        _dispatcher.OnDocumentStart += msg => observed = msg;
+        _manager.OnDocumentStart += msg => observed = msg;
 
         const string json = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
-        _dispatcher.HandleMessage(json);
+        _manager.HandleMessage(json);
 
         Assert.NotNull(observed);
         Assert.AreEqual("doc-123", observed.documentId);
@@ -40,10 +40,10 @@ public class DocumentMessageDispatcherTests
     public void HandleMessage_DocumentPage_InvokesPageEvent()
     {
         DocumentPageMessage observed = null;
-        _dispatcher.OnDocumentPage += msg => observed = msg;
+        _manager.OnDocumentPage += msg => observed = msg;
 
         const string json = "{\"type\":\"document-page\",\"documentId\":\"doc-123\",\"pageIndex\":1,\"totalPages\":12,\"width\":900,\"height\":1200,\"chunkIndex\":0,\"totalChunks\":2,\"data\":\"AQID\"}";
-        _dispatcher.HandleMessage(json);
+        _manager.HandleMessage(json);
 
         Assert.NotNull(observed);
         Assert.AreEqual("doc-123", observed.documentId);
@@ -56,10 +56,10 @@ public class DocumentMessageDispatcherTests
     public void HandleMessage_DocumentClose_InvokesCloseEvent()
     {
         DocumentCloseMessage observed = null;
-        _dispatcher.OnDocumentClose += msg => observed = msg;
+        _manager.OnDocumentClose += msg => observed = msg;
 
         const string json = "{\"type\":\"document-close\",\"documentId\":\"doc-123\"}";
-        _dispatcher.HandleMessage(json);
+        _manager.HandleMessage(json);
 
         Assert.NotNull(observed);
         Assert.AreEqual("doc-123", observed.documentId);
@@ -72,11 +72,11 @@ public class DocumentMessageDispatcherTests
         var pageCalled = false;
         var closeCalled = false;
 
-        _dispatcher.OnDocumentStart += _ => startCalled = true;
-        _dispatcher.OnDocumentPage += _ => pageCalled = true;
-        _dispatcher.OnDocumentClose += _ => closeCalled = true;
+        _manager.OnDocumentStart += _ => startCalled = true;
+        _manager.OnDocumentPage += _ => pageCalled = true;
+        _manager.OnDocumentClose += _ => closeCalled = true;
 
-        _dispatcher.HandleMessage("{\"type\":\"document-unknown\"}");
+        _manager.HandleMessage("{\"type\":\"document-unknown\"}");
 
         Assert.IsFalse(startCalled);
         Assert.IsFalse(pageCalled);

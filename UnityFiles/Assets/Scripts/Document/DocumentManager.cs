@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using Unity.WebRTC;
 using UnityEngine;
 
-public class DocumentMessageDispatcher : MonoBehaviour
+public class DocumentManager : MonoBehaviour
 {
     public event Action<DocumentStartMessage> OnDocumentStart;
     public event Action<DocumentPageMessage> OnDocumentPage;
@@ -42,14 +42,14 @@ public class DocumentMessageDispatcher : MonoBehaviour
         }
         catch (Exception ex)
         {
-            Debug.LogError($"DocumentMessageDispatcher: invalid JSON payload. {ex.Message}");
+            Debug.LogError($"DocumentManager: invalid JSON payload. {ex.Message}");
             return;
         }
 
         var type = (string)root["type"];
         if (string.IsNullOrWhiteSpace(type))
         {
-            Debug.LogWarning("DocumentMessageDispatcher: payload missing 'type'.");
+            Debug.LogWarning("DocumentManager: payload missing 'type'.");
             return;
         }
 
@@ -68,7 +68,7 @@ public class DocumentMessageDispatcher : MonoBehaviour
                 break;
 
             default:
-                Debug.LogWarning($"DocumentMessageDispatcher: unsupported type '{type}'.");
+                Debug.LogWarning($"DocumentManager: unsupported type '{type}'.");
                 break;
         }
     }
