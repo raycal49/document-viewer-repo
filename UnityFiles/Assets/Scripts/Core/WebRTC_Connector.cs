@@ -13,6 +13,7 @@ public class WebRTCSender : MonoBehaviour
     [SerializeField] private SignalingClient signalingClient;
     [SerializeField] private PeerConnectionManager peerConnectionManager;
     [SerializeField] private AnnotationManager annotationManager;
+    [SerializeField] private DocumentMessageDispatcher documentMessageDispatcher;
     [SerializeField] private MicrophoneCapture microphoneCapture;
 
     [Header("Call Button UI")]
@@ -24,6 +25,7 @@ public class WebRTCSender : MonoBehaviour
     private string callerName = "Meta Quest User";
     private readonly ConcurrentQueue<string> messageQueue = new ConcurrentQueue<string>();
     private readonly ConcurrentQueue<string> annotationQueue = new ConcurrentQueue<string>();
+    private readonly ConcurrentQueue<string> documentQueue = new ConcurrentQueue<string>();
     private string userId;
     private string room;
     private bool _callActive = false;
@@ -215,7 +217,13 @@ public class WebRTCSender : MonoBehaviour
         if (peerConnectionManager.DocumentsChannel == null)
             Debug.LogError("WebRTCSender: Documents data channel was not created.");
         else
+        {
             Debug.Log("WebRTCSender: Documents data channel is ready.");
+            if (documentMessageDispatcher != null)
+                documentMessageDispatcher.HandleDataChannel(peerConnectionManager.DocumentsChannel, documentQueue);
+            else
+                Debug.LogWarning("WebRTCSender: DocumentMessageDispatcher is not assigned.");
+        }
 
         // no need for this. keeping here just in case.
         //microphoneCapture.StartCapture();
@@ -249,6 +257,8 @@ public class WebRTCSender : MonoBehaviour
                 signalingClient.HandleMessage(raw);
             while (annotationQueue.TryDequeue(out string json))
                 annotationManager.HandleMessage(json);
+            while (documentQueue.TryDequeue(out string documentJson))
+                documentMessageDispatcher?.HandleMessage(documentJson);
 
             yield return null;
         }
