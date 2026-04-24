@@ -3,7 +3,7 @@ using UnityEngine;
 public class PdfPageDisplay : MonoBehaviour
 {
     [SerializeField] private Texture2D _testTexture;
-    [SerializeField] private string _testUrl;
+    [SerializeField] private TextAsset _testJpegBytes;
     [SerializeField] private bool _isDevMode;
 
     private GameObject _quad;
@@ -26,31 +26,53 @@ public class PdfPageDisplay : MonoBehaviour
 
     private void Start()
     {
-        if (_isDevMode && !string.IsNullOrEmpty(_testUrl))
-            ShowFromUrl(_testUrl);
+        if (_isDevMode && _testJpegBytes != null)
+        {
+            ShowFromBytes(_testJpegBytes.bytes, 0, 0);
+        }
     }
 
     public void Show(Texture2D tex)
     {
         if (tex == null) return;
+
         _currentTexture = tex;
         _material.mainTexture = tex;
         _quad.SetActive(true);
     }
 
-    public void ShowFromUrl(string url)
+    public void ShowFromBytes(byte[] jpegBytes, int width, int height)
     {
-        StartCoroutine(TextureDownloader.Download(
-            url,
-            Show,
-            err => Debug.LogError($"PdfPageDisplay: texture download failed — {err}")));
+        if (jpegBytes == null || jpegBytes.Length == 0)
+        {
+            Debug.LogError("PdfPageDisplay: received empty JPEG byte payload.");
+            return;
+        }
+
+        var decodedTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        if (!decodedTexture.LoadImage(jpegBytes, markNonReadable: false))
+        {
+            Destroy(decodedTexture);
+            Debug.LogError("PdfPageDisplay: failed to decode JPEG byte payload.");
+            return;
+        }
+
+        Show(decodedTexture);
     }
 
     [ContextMenu("Test Show")]
     private void TestShow()
     {
         if (_testTexture != null)
+        {
             Show(_testTexture);
+            return;
+        }
+
+        if (_testJpegBytes != null)
+        {
+            ShowFromBytes(_testJpegBytes.bytes, 0, 0);
+        }
     }
 
     private void OnDestroy()
