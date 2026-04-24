@@ -275,7 +275,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 | US-12 | HTTP POST helper | ❌ Dropped |
 | US-13 | Quest navigation controls over data channel | — |
 | US-14 | Texture lifecycle + loading + errors | — |
-| US-15 | Dedicated `documents` data channel | — |
+| US-15 | Dedicated `documents` data channel | ✅ Done |
 | US-16 | Chunk reassembly + JPEG decode | — |
 | US-17 | Page cache ±1 eviction | — |
 | US-18 | World Space Canvas UI overlay | — |

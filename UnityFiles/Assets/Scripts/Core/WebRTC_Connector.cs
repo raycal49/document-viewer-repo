@@ -211,7 +211,12 @@ public class WebRTCSender : MonoBehaviour
 
         if (peerConnectionManager.AnnotationChannel != null)
             annotationManager.HandleDataChannel(peerConnectionManager.AnnotationChannel, annotationQueue);
-        
+
+        if (peerConnectionManager.DocumentsChannel == null)
+            Debug.LogError("WebRTCSender: Documents data channel was not created.");
+        else
+            Debug.Log("WebRTCSender: Documents data channel is ready.");
+
         // no need for this. keeping here just in case.
         //microphoneCapture.StartCapture();
         //yield return new WaitForSeconds(0.2f);
