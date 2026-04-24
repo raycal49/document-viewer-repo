@@ -281,4 +281,4 @@ No mandatory test quota per story; test where risk and ROI justify it.
 | US-18 | World Space Canvas UI overlay | — |
 | US-19 | Click-to-jump page input | — |
 | US-20 | Follow toggle behavior | — |
-| US-21 | `ShowFromBytes` render API | — |
+| US-21 | `ShowFromBytes` render API | ✅ Done |

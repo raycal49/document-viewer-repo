@@ -34,7 +34,10 @@ public class PdfPageDisplay : MonoBehaviour
 
     public void Show(Texture2D tex)
     {
-        if (tex == null) return;
+        if (tex == null)
+        {
+            return;
+        }
 
         _currentTexture = tex;
         _material.mainTexture = tex;
@@ -43,21 +46,39 @@ public class PdfPageDisplay : MonoBehaviour
 
     public void ShowFromBytes(byte[] jpegBytes, int width, int height)
     {
-        if (jpegBytes == null || jpegBytes.Length == 0)
+        if (!TryDecodeJpegBytes(jpegBytes, out var decodedTexture))
         {
-            Debug.LogError("PdfPageDisplay: received empty JPEG byte payload.");
-            return;
-        }
-
-        var decodedTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        if (!decodedTexture.LoadImage(jpegBytes, markNonReadable: false))
-        {
-            Destroy(decodedTexture);
             Debug.LogError("PdfPageDisplay: failed to decode JPEG byte payload.");
             return;
         }
 
+        if (width > 0 && height > 0 && (decodedTexture.width != width || decodedTexture.height != height))
+        {
+            Debug.LogWarning($"PdfPageDisplay: decoded dimensions ({decodedTexture.width}x{decodedTexture.height}) do not match payload metadata ({width}x{height}).");
+        }
+
         Show(decodedTexture);
+    }
+
+    public static bool TryDecodeJpegBytes(byte[] jpegBytes, out Texture2D decodedTexture)
+    {
+        decodedTexture = null;
+
+        if (jpegBytes == null || jpegBytes.Length == 0)
+        {
+            Debug.LogError("PdfPageDisplay: received empty JPEG byte payload.");
+            return false;
+        }
+
+        var candidateTexture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        if (!candidateTexture.LoadImage(jpegBytes, markNonReadable: false))
+        {
+            Destroy(candidateTexture);
+            return false;
+        }
+
+        decodedTexture = candidateTexture;
+        return true;
     }
 
     [ContextMenu("Test Show")]
