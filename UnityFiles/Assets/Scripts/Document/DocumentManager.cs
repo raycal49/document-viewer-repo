@@ -14,6 +14,9 @@ public class DocumentManager : MonoBehaviour
     public event Action<DocumentStartMessage> OnDocumentStart;
     public event Action<DocumentPageMessage> OnDocumentPage;
     public event Action<DocumentCloseMessage> OnDocumentClose;
+    public event Action<DocumentNavigateMessage> OnDocumentNavigate;
+    public event Action<DocumentRequestPageMessage> OnDocumentRequestPage;
+    public event Action<string> OnOutboundDocumentMessage;
 
     public bool IsDocumentOpen => _sessionState.IsDocumentOpen;
     public string CurrentDocumentId => _sessionState.CurrentDocumentId;
@@ -82,10 +85,86 @@ public class DocumentManager : MonoBehaviour
                 HandleDocumentClose(root.ToObject<DocumentCloseMessage>());
                 break;
 
+            case "document-navigate":
+                HandleDocumentNavigate(root.ToObject<DocumentNavigateMessage>());
+                break;
+
+            case "document-request-page":
+                HandleDocumentRequestPage(root.ToObject<DocumentRequestPageMessage>());
+                break;
+
             default:
                 Debug.LogWarning($"DocumentManager: unsupported type '{type}'.");
                 break;
         }
+    }
+
+    public bool NavigatePrevious(string source = "quest-prev")
+    {
+        return NavigateToPage(_sessionState.CurrentPageIndex - 1, source);
+    }
+
+    public bool NavigateNext(string source = "quest-next")
+    {
+        return NavigateToPage(_sessionState.CurrentPageIndex + 1, source);
+    }
+
+    public bool NavigateToPage(int targetPageIndex, string source = "quest-jump")
+    {
+        if (!_sessionState.IsDocumentOpen || string.IsNullOrWhiteSpace(_sessionState.CurrentDocumentId))
+        {
+            Debug.LogWarning("DocumentManager: ignoring navigation because no active document is open.");
+            return false;
+        }
+
+        if (_sessionState.TotalPages <= 0)
+        {
+            Debug.LogWarning("DocumentManager: ignoring navigation because total pages is not positive.");
+            return false;
+        }
+
+        var clampedPageIndex = Mathf.Clamp(targetPageIndex, 0, _sessionState.TotalPages - 1);
+        if (clampedPageIndex == _sessionState.CurrentPageIndex)
+            return false;
+
+        _sessionState.CurrentPageIndex = clampedPageIndex;
+
+        var navigateMessage = new DocumentNavigateMessage
+        {
+            documentId = _sessionState.CurrentDocumentId,
+            pageIndex = clampedPageIndex,
+            source = source
+        };
+
+        var sent = SendDocumentMessage("document-navigate", navigateMessage);
+        OnDocumentNavigate?.Invoke(navigateMessage);
+        return sent;
+    }
+
+    public bool RequestPage(int pageIndex)
+    {
+        if (!_sessionState.IsDocumentOpen || string.IsNullOrWhiteSpace(_sessionState.CurrentDocumentId))
+        {
+            Debug.LogWarning("DocumentManager: ignoring page request because no active document is open.");
+            return false;
+        }
+
+        if (_sessionState.TotalPages <= 0)
+        {
+            Debug.LogWarning("DocumentManager: ignoring page request because total pages is not positive.");
+            return false;
+        }
+
+        var clampedPageIndex = Mathf.Clamp(pageIndex, 0, _sessionState.TotalPages - 1);
+        var requestMessage = new DocumentRequestPageMessage
+        {
+            documentId = _sessionState.CurrentDocumentId,
+            pageIndex = clampedPageIndex
+        };
+
+        var sent = SendDocumentMessage("document-request-page", requestMessage);
+        OnDocumentRequestPage?.Invoke(requestMessage);
+        return sent;
     }
 
     private void HandleDocumentStart(DocumentStartMessage message)
@@ -221,6 +300,74 @@ public class DocumentManager : MonoBehaviour
         ResetDocumentState();
         ClearAssembliesForCurrentDocument();
         OnDocumentClose?.Invoke(message);
+    }
+
+    private void HandleDocumentNavigate(DocumentNavigateMessage message)
+    {
+        if (message == null || string.IsNullOrWhiteSpace(message.documentId))
+        {
+            Debug.LogWarning("DocumentManager: ignoring invalid document-navigate payload.");
+            return;
+        }
+
+        if (!_sessionState.IsDocumentOpen || !string.Equals(message.documentId, _sessionState.CurrentDocumentId, StringComparison.Ordinal))
+        {
+            Debug.LogWarning($"DocumentManager: ignoring document-navigate for non-active document '{message.documentId}'. Active='{_sessionState.CurrentDocumentId}'.");
+            return;
+        }
+
+        if (_sessionState.TotalPages <= 0)
+        {
+            Debug.LogWarning("DocumentManager: ignoring document-navigate because total pages is not positive.");
+            return;
+        }
+
+        var clampedPageIndex = Mathf.Clamp(message.pageIndex, 0, _sessionState.TotalPages - 1);
+        _sessionState.CurrentPageIndex = clampedPageIndex;
+        message.pageIndex = clampedPageIndex;
+        OnDocumentNavigate?.Invoke(message);
+    }
+
+    private void HandleDocumentRequestPage(DocumentRequestPageMessage message)
+    {
+        if (message == null || string.IsNullOrWhiteSpace(message.documentId))
+        {
+            Debug.LogWarning("DocumentManager: ignoring invalid document-request-page payload.");
+            return;
+        }
+
+        if (!_sessionState.IsDocumentOpen || !string.Equals(message.documentId, _sessionState.CurrentDocumentId, StringComparison.Ordinal))
+        {
+            Debug.LogWarning($"DocumentManager: ignoring document-request-page for non-active document '{message.documentId}'. Active='{_sessionState.CurrentDocumentId}'.");
+            return;
+        }
+
+        if (_sessionState.TotalPages <= 0)
+        {
+            Debug.LogWarning("DocumentManager: ignoring document-request-page because total pages is not positive.");
+            return;
+        }
+
+        message.pageIndex = Mathf.Clamp(message.pageIndex, 0, _sessionState.TotalPages - 1);
+        OnDocumentRequestPage?.Invoke(message);
+    }
+
+    private bool SendDocumentMessage(string type, object payload)
+    {
+        var root = JObject.FromObject(payload ?? new object());
+        root["type"] = type;
+        var json = root.ToString(Newtonsoft.Json.Formatting.None);
+
+        OnOutboundDocumentMessage?.Invoke(json);
+
+        if (_dataChannel == null)
+        {
+            Debug.LogWarning($"DocumentManager: documents channel unavailable; queued outbound payload only. type='{type}'.");
+            return false;
+        }
+
+        _dataChannel.Send(Encoding.UTF8.GetBytes(json));
+        return true;
     }
 
     private static string BuildAssemblyKey(string documentId, int pageIndex)

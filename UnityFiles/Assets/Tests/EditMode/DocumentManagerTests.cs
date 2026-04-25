@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 [TestFixture]
@@ -164,5 +165,80 @@ public class DocumentManagerTests
         Assert.IsFalse(startCalled);
         Assert.IsFalse(pageCalled);
         Assert.IsFalse(closeCalled);
+    }
+
+    [Test]
+    public void NavigateNext_WhenDocumentOpen_UpdatesPageAndEmitsNavigateMessage()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":3}";
+        _manager.HandleMessage(startJson);
+
+        string outboundJson = null;
+        DocumentNavigateMessage observedNavigate = null;
+        _manager.OnOutboundDocumentMessage += json => outboundJson = json;
+        _manager.OnDocumentNavigate += msg => observedNavigate = msg;
+
+        var sent = _manager.NavigateNext("quest-next-button");
+
+        Assert.IsFalse(sent, "No data channel is attached in this EditMode test, so send should return false.");
+        Assert.NotNull(outboundJson);
+        Assert.NotNull(observedNavigate);
+        Assert.AreEqual(1, _manager.CurrentPageIndex);
+
+        var root = JObject.Parse(outboundJson);
+        Assert.AreEqual("document-navigate", (string)root["type"]);
+        Assert.AreEqual("doc-123", (string)root["documentId"]);
+        Assert.AreEqual(1, (int)root["pageIndex"]);
+        Assert.AreEqual("quest-next-button", (string)root["source"]);
+    }
+
+    [Test]
+    public void NavigatePrevious_AtFirstPage_DoesNotEmitMessage()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":3}";
+        _manager.HandleMessage(startJson);
+
+        var outboundCalled = false;
+        _manager.OnOutboundDocumentMessage += _ => outboundCalled = true;
+
+        var sent = _manager.NavigatePrevious("quest-prev-button");
+
+        Assert.IsFalse(sent);
+        Assert.IsFalse(outboundCalled);
+        Assert.AreEqual(0, _manager.CurrentPageIndex);
+    }
+
+    [Test]
+    public void HandleMessage_DocumentNavigate_ClampsAndUpdatesPage()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":3}";
+        _manager.HandleMessage(startJson);
+
+        DocumentNavigateMessage observed = null;
+        _manager.OnDocumentNavigate += msg => observed = msg;
+
+        const string navigateJson = "{\"type\":\"document-navigate\",\"documentId\":\"doc-123\",\"pageIndex\":99,\"source\":\"peer\"}";
+        _manager.HandleMessage(navigateJson);
+
+        Assert.NotNull(observed);
+        Assert.AreEqual(2, observed.pageIndex);
+        Assert.AreEqual(2, _manager.CurrentPageIndex);
+    }
+
+    [Test]
+    public void HandleMessage_DocumentRequestPage_ClampsAndInvokesEvent()
+    {
+        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":3}";
+        _manager.HandleMessage(startJson);
+
+        DocumentRequestPageMessage observed = null;
+        _manager.OnDocumentRequestPage += msg => observed = msg;
+
+        const string requestJson = "{\"type\":\"document-request-page\",\"documentId\":\"doc-123\",\"pageIndex\":-7}";
+        _manager.HandleMessage(requestJson);
+
+        Assert.NotNull(observed);
+        Assert.AreEqual(0, observed.pageIndex);
+        Assert.AreEqual(0, _manager.CurrentPageIndex);
     }
 }
