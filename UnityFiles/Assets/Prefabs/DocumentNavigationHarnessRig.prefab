@@ -126,6 +126,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   documentManager: {fileID: 1140000000000000002}
   navigationController: {fileID: 1140000000000000004}
+  navigationChannel: {fileID: 1140000000000000003}
   documentId: exec_summary
   documentName: Exec Summary
   autoSortFromNames: 1
@@ -136,4 +137,7 @@ MonoBehaviour:
   autoStartSessionOnEnable: 1
   listenToNavigateApplied: 1
   listenToRequestPageIntent: 1
+  logAllJsonTraffic: 1
+  prettyPrintJsonLogs: 0
+  maxJsonCharacters: 0
   verboseLogs: 1

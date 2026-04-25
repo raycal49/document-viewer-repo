@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
@@ -16,6 +17,7 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     [Header("References")]
     [SerializeField] private DocumentManager documentManager;
     [SerializeField] private DocumentNavigationController navigationController;
+    [SerializeField] private DocumentNavigationChannel navigationChannel;
 
     [Header("Document metadata")]
     [SerializeField] private string documentId = "exec_summary";
@@ -37,6 +39,11 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     [SerializeField] private bool autoStartSessionOnEnable = true;
     [SerializeField] private bool listenToNavigateApplied = true;
     [SerializeField] private bool listenToRequestPageIntent = true;
+
+    [Header("Observability")]
+    [SerializeField] private bool logAllJsonTraffic = true;
+    [SerializeField] private bool prettyPrintJsonLogs = false;
+    [SerializeField] private int maxJsonCharacters = 0;
 
     [Header("Diagnostics")]
     [SerializeField] private bool verboseLogs = true;
@@ -101,7 +108,9 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
             ["documentId"] = documentId
         };
 
-        documentManager.HandleMessage(root.ToString(Newtonsoft.Json.Formatting.None));
+        var json = root.ToString(Formatting.None);
+        EmitSentJson("document-close", json);
+        documentManager.HandleMessage(json);
         _sessionStarted = false;
 
         if (verboseLogs)
@@ -153,7 +162,9 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
                 ["data"] = Convert.ToBase64String(chunks[i])
             };
 
-            documentManager.HandleMessage(pageRoot.ToString(Newtonsoft.Json.Formatting.None));
+            var json = pageRoot.ToString(Formatting.None);
+            EmitSentJson("document-page", json);
+            documentManager.HandleMessage(json);
         }
 
         if (verboseLogs)
@@ -162,23 +173,41 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
 
     private void Attach()
     {
-        if (navigationController == null)
-            return;
+        if (navigationController != null)
+        {
+            if (listenToNavigateApplied)
+                navigationController.OnNavigateApplied += HandleNavigateApplied;
 
-        if (listenToNavigateApplied)
-            navigationController.OnNavigateApplied += HandleNavigateApplied;
+            if (listenToRequestPageIntent)
+                navigationController.OnRequestPageIntent += HandleRequestPageIntent;
+        }
 
-        if (listenToRequestPageIntent)
-            navigationController.OnRequestPageIntent += HandleRequestPageIntent;
+        if (documentManager != null)
+            documentManager.OnRawJsonMessageReceived += HandleDocumentManagerReceivedJson;
+
+        if (navigationChannel != null)
+        {
+            navigationChannel.OnInboundMessageSerialized += HandleNavigationChannelInboundJson;
+            navigationChannel.OnOutboundMessageSerialized += HandleNavigationChannelOutboundJson;
+        }
     }
 
     private void Detach()
     {
-        if (navigationController == null)
-            return;
+        if (navigationController != null)
+        {
+            navigationController.OnNavigateApplied -= HandleNavigateApplied;
+            navigationController.OnRequestPageIntent -= HandleRequestPageIntent;
+        }
 
-        navigationController.OnNavigateApplied -= HandleNavigateApplied;
-        navigationController.OnRequestPageIntent -= HandleRequestPageIntent;
+        if (documentManager != null)
+            documentManager.OnRawJsonMessageReceived -= HandleDocumentManagerReceivedJson;
+
+        if (navigationChannel != null)
+        {
+            navigationChannel.OnInboundMessageSerialized -= HandleNavigationChannelInboundJson;
+            navigationChannel.OnOutboundMessageSerialized -= HandleNavigationChannelOutboundJson;
+        }
     }
 
     private void HandleNavigateApplied(DocumentNavigateMessage message)
@@ -197,6 +226,21 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         SendPageByZeroBasedIndex(message.pageIndex);
     }
 
+    private void HandleDocumentManagerReceivedJson(string json)
+    {
+        EmitReceivedJson("document-manager", json);
+    }
+
+    private void HandleNavigationChannelInboundJson(string json)
+    {
+        EmitReceivedJson("navigation-channel", json);
+    }
+
+    private void HandleNavigationChannelOutboundJson(string json)
+    {
+        EmitSentJson("navigation-channel", json);
+    }
+
     private bool IsForThisDocument(string incomingDocumentId)
     {
         return string.Equals(incomingDocumentId, documentId, StringComparison.Ordinal);
@@ -212,7 +256,9 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
             ["totalPages"] = Mathf.Max(0, totalPages)
         };
 
-        documentManager.HandleMessage(root.ToString(Newtonsoft.Json.Formatting.None));
+        var json = root.ToString(Formatting.None);
+        EmitSentJson("document-start", json);
+        documentManager.HandleMessage(json);
 
         if (verboseLogs)
             Debug.Log($"AutoDocumentPageSenderHarness: sent document-start id={documentId}, totalPages={totalPages}.");
@@ -305,5 +351,47 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
 
         Debug.LogError("AutoDocumentPageSenderHarness: DocumentNavigationController is not assigned.");
         return false;
+    }
+
+    private void EmitSentJson(string route, string json)
+    {
+        EmitJson("sent", route, json);
+    }
+
+    private void EmitReceivedJson(string route, string json)
+    {
+        EmitJson("received", route, json);
+    }
+
+    private void EmitJson(string direction, string route, string json)
+    {
+        if (!logAllJsonTraffic || string.IsNullOrWhiteSpace(json))
+            return;
+
+        var payload = FormatJsonForLog(json);
+        Debug.Log($"[AutoDocumentPageSenderHarness][{direction}][{route}] {payload}");
+    }
+
+    private string FormatJsonForLog(string json)
+    {
+        var candidate = json;
+
+        if (prettyPrintJsonLogs)
+        {
+            try
+            {
+                var parsed = JToken.Parse(json);
+                candidate = parsed.ToString(Formatting.Indented);
+            }
+            catch
+            {
+                // keep raw string if parsing fails
+            }
+        }
+
+        if (maxJsonCharacters > 0 && candidate.Length > maxJsonCharacters)
+            return candidate.Substring(0, maxJsonCharacters) + "...<truncated>";
+
+        return candidate;
     }
 }

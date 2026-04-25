@@ -8,6 +8,7 @@ public class DocumentNavigationChannel : MonoBehaviour
 {
     public event Action<DocumentNavigateMessage> OnNavigateReceived;
     public event Action<DocumentRequestPageMessage> OnRequestPageReceived;
+    public event Action<string> OnInboundMessageSerialized;
     public event Action<string> OnOutboundMessageSerialized;
 
     private RTCDataChannel _dataChannel;
@@ -35,6 +36,8 @@ public class DocumentNavigationChannel : MonoBehaviour
         var type = (string)root["type"];
         if (string.IsNullOrWhiteSpace(type))
             return false;
+
+        OnInboundMessageSerialized?.Invoke(json);
 
         switch (type)
         {

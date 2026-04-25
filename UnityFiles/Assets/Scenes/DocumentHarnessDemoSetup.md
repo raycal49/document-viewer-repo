@@ -25,9 +25,24 @@ It already includes and wires:
 - **B button** (`OVRInput.Button.Two`): previous page
 - Existing UI/button hooks continue to work via `DocumentNavigationControls` methods.
 
+## JSON observability
+
+`AutoDocumentPageSenderHarness` now logs both sent and received JSON traffic:
+
+- sent document payloads (`document-start`, `document-page`, `document-close`)
+- sent/received navigation channel payloads
+- received payloads observed by `DocumentManager.HandleMessage`
+
+Use these inspector fields on `AutoDocumentPageSenderHarness`:
+
+- `logAllJsonTraffic` (enable/disable full traffic logs)
+- `prettyPrintJsonLogs` (indented JSON for readability)
+- `maxJsonCharacters` (truncate huge payloads, `0` = no truncation)
+
 ## Expected flow
 
 1. Enter Play Mode.
 2. Harness auto-starts (`autoStartSessionOnEnable`) and sends `document-start` + page 1.
 3. Press A/B to navigate.
 4. Harness auto-sends chunked `document-page` payloads from local assets for each page change.
+5. Observe traffic in Console with `[AutoDocumentPageSenderHarness][sent|received][route]` prefixes.
