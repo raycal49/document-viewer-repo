@@ -5,6 +5,8 @@ public class DocumentNavigationHarness : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private DocumentManager documentManager;
+    [SerializeField] private DocumentNavigationController navigationController;
+    [SerializeField] private DocumentNavigationChannel navigationChannel;
 
     [Header("Session setup")]
     [SerializeField] private string documentId = "manual-001";
@@ -17,14 +19,14 @@ public class DocumentNavigationHarness : MonoBehaviour
 
     private void OnEnable()
     {
-        if (documentManager != null)
-            documentManager.OnOutboundDocumentMessage += HandleOutboundMessage;
+        if (navigationChannel != null)
+            navigationChannel.OnOutboundMessageSerialized += HandleOutboundMessage;
     }
 
     private void OnDisable()
     {
-        if (documentManager != null)
-            documentManager.OnOutboundDocumentMessage -= HandleOutboundMessage;
+        if (navigationChannel != null)
+            navigationChannel.OnOutboundMessageSerialized -= HandleOutboundMessage;
     }
 
     [ContextMenu("Setup Session (document-start)")]
@@ -32,6 +34,9 @@ public class DocumentNavigationHarness : MonoBehaviour
     {
         if (!HasManager())
             return;
+
+        if (navigationController != null && navigationChannel != null)
+            navigationController.Configure(documentManager, navigationChannel);
 
         var json = $"{{\"type\":\"document-start\",\"documentId\":\"{documentId}\",\"documentName\":\"{documentName}\",\"totalPages\":{Mathf.Max(0, totalPages)}}}";
         documentManager.HandleMessage(json);
@@ -41,44 +46,61 @@ public class DocumentNavigationHarness : MonoBehaviour
     [ContextMenu("Press Prev")]
     public void PressPrev()
     {
-        if (!HasManager())
+        if (!HasManagerAndController())
             return;
 
-        var sent = documentManager.NavigatePrevious("harness-prev");
+        var sent = navigationController.NavigatePrevious("harness-prev");
         Debug.Log($"DocumentNavigationHarness: prev pressed. sent={sent}, currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
 
     [ContextMenu("Press Next")]
     public void PressNext()
     {
-        if (!HasManager())
+        if (!HasManagerAndController())
             return;
 
-        var sent = documentManager.NavigateNext("harness-next");
+        var sent = navigationController.NavigateNext("harness-next");
         Debug.Log($"DocumentNavigationHarness: next pressed. sent={sent}, currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
 
     [ContextMenu("Press Jump (configured page)")]
     public void PressJump()
     {
-        if (!HasManager())
+        if (!HasManagerAndController())
             return;
 
         var targetPageIndex = Mathf.Max(1, jumpToPageOneBased) - 1;
-        var sent = documentManager.NavigateToPage(targetPageIndex, "harness-jump");
+        var sent = navigationController.NavigateToPage(targetPageIndex, "harness-jump");
         Debug.Log($"DocumentNavigationHarness: jump pressed target={jumpToPageOneBased}, sent={sent}, currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
 
     [ContextMenu("Simulate Inbound Navigate")]
     public void SimulateInboundNavigate()
     {
-        if (!HasManager())
+        if (!HasManagerAndController() || navigationChannel == null)
             return;
 
         var pageIndex = Mathf.Max(1, inboundNavigatePageOneBased) - 1;
         var json = $"{{\"type\":\"document-navigate\",\"documentId\":\"{documentId}\",\"pageIndex\":{pageIndex},\"source\":\"harness-remote\"}}";
-        documentManager.HandleMessage(json);
+        navigationChannel.TryHandleInboundMessage(json);
         Debug.Log($"DocumentNavigationHarness: simulated inbound navigate to {inboundNavigatePageOneBased}. currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
+    }
+
+    private bool HasManagerAndController()
+    {
+        if (documentManager == null)
+        {
+            Debug.LogError("DocumentNavigationHarness: DocumentManager is not assigned.");
+            return false;
+        }
+
+        if (navigationController == null)
+        {
+            Debug.LogError("DocumentNavigationHarness: DocumentNavigationController is not assigned.");
+            return false;
+        }
+
+        return true;
     }
 
     private bool HasManager()

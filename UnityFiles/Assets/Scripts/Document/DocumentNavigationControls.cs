@@ -2,38 +2,38 @@ using UnityEngine;
 
 public class DocumentNavigationControls : MonoBehaviour
 {
-    [SerializeField] private DocumentManager documentManager;
+    [SerializeField] private DocumentNavigationController navigationController;
     [SerializeField] private string prevSource = "quest-prev-button";
     [SerializeField] private string nextSource = "quest-next-button";
     [SerializeField] private string jumpSource = "quest-jump-input";
 
     public void OnPrevPressed()
     {
-        if (documentManager == null)
+        if (navigationController == null)
         {
-            Debug.LogWarning("DocumentNavigationControls: DocumentManager is not assigned.");
+            Debug.LogWarning("DocumentNavigationControls: DocumentNavigationController is not assigned.");
             return;
         }
 
-        documentManager.NavigatePrevious(prevSource);
+        navigationController.NavigatePrevious(prevSource);
     }
 
     public void OnNextPressed()
     {
-        if (documentManager == null)
+        if (navigationController == null)
         {
-            Debug.LogWarning("DocumentNavigationControls: DocumentManager is not assigned.");
+            Debug.LogWarning("DocumentNavigationControls: DocumentNavigationController is not assigned.");
             return;
         }
 
-        documentManager.NavigateNext(nextSource);
+        navigationController.NavigateNext(nextSource);
     }
 
     public void OnJumpSubmitted(string pageText)
     {
-        if (documentManager == null)
+        if (navigationController == null)
         {
-            Debug.LogWarning("DocumentNavigationControls: DocumentManager is not assigned.");
+            Debug.LogWarning("DocumentNavigationControls: DocumentNavigationController is not assigned.");
             return;
         }
 
@@ -44,6 +44,6 @@ public class DocumentNavigationControls : MonoBehaviour
         }
 
         var zeroBasedPage = oneBasedPage - 1;
-        documentManager.NavigateToPage(zeroBasedPage, jumpSource);
+        navigationController.NavigateToPage(zeroBasedPage, jumpSource);
     }
 }
