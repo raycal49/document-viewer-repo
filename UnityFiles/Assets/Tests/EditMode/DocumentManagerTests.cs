@@ -165,4 +165,5 @@ public class DocumentManagerTests
         Assert.IsFalse(pageCalled);
         Assert.IsFalse(closeCalled);
     }
+
 }

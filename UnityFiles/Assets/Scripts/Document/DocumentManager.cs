@@ -88,6 +88,21 @@ public class DocumentManager : MonoBehaviour
         }
     }
 
+    public bool TrySetCurrentPageIndex(int targetPageIndex, out int clampedPageIndex)
+    {
+        clampedPageIndex = -1;
+
+        if (!_sessionState.IsDocumentOpen || string.IsNullOrWhiteSpace(_sessionState.CurrentDocumentId))
+            return false;
+
+        if (_sessionState.TotalPages <= 0)
+            return false;
+
+        clampedPageIndex = Mathf.Clamp(targetPageIndex, 0, _sessionState.TotalPages - 1);
+        _sessionState.CurrentPageIndex = clampedPageIndex;
+        return true;
+    }
+
     private void HandleDocumentStart(DocumentStartMessage message)
     {
         if (message == null || string.IsNullOrWhiteSpace(message.documentId))
