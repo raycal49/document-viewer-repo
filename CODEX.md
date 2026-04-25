@@ -39,6 +39,10 @@ Removed from v1 backend scope:
 
 WebSocket signaling remains for connection establishment. Document interaction payloads move to the `documents` data channel.
 
+Protocol note:
+- Both platforms (web and Quest) must support **outbound send** and **inbound receive/handle** for page-navigation messages on the `documents` channel.
+- Navigation messages must be processed symmetrically so either peer can initiate page changes.
+
 Inbound to Quest (from web):
 - `DocumentStartMessage { documentId, documentName, totalPages }`
 - `DocumentPageMessage { documentId, pageIndex, totalPages, width, height, chunkIndex, totalChunks, data }`
@@ -59,6 +63,11 @@ Outbound from Quest (to web):
 
 - `PdfPageDisplay` owns Quad + material and renders decoded bytes with:
   - `ShowFromBytes(byte[] jpegBytes, int width, int height)`
+- The rendered PDF surface is **display-only** for navigation in v1 (non-interactive page navigation on the page itself).
+- All page navigation must occur through explicit UI controls:
+  - Prev
+  - Next
+  - page jump (`TMP_InputField`)
 - `DocumentManager` owns:
   - chunk reassembly
   - page cache and eviction
@@ -227,10 +236,16 @@ No mandatory test quota per story; test where risk and ROI justify it.
 ### Phase 3 — Navigation and sync semantics
 
 **US-13 — Quest page controls wired to data channel** · M · US-05
-- Prev/Next/jump send `document-navigate` or `document-request-page`.
+- Rendered PDF surface remains non-interactive for navigation.
+- Prev/Next/page-jump controls are the only navigation inputs.
+- Prev/Next/jump send `document-navigate` or `document-request-page` via the `documents` channel.
+- Both outbound send and inbound handling of navigation messages are required on both platforms.
 
 **US-19 — `TMP_InputField` click-to-jump** · S · US-13
-- Validate/bounds-clamp input and route through same navigation path.
+- Acceptance criteria:
+  - Accept explicit page-number entry from the user.
+  - Validate and clamp input to `[1, totalPages]` before navigation.
+  - Route jump navigation through the same navigation message path used by Prev/Next.
 
 **US-20 — Follow toggle behavior** · S · US-13
 - Gate whether inbound remote navigation updates local current page.
@@ -239,6 +254,10 @@ No mandatory test quota per story; test where risk and ROI justify it.
 - **Dropped from scope** (no `/documents/select` flow in v1).
 
 ### Phase 4 — AR placement and memory hardening
+
+**Phase 4 navigation guardrail**
+- Rendered PDF surface remains non-interactive for navigation; no direct page-surface gestures/taps for paging.
+- Paging continues to use the same explicit controls (Prev/Next/page jump) introduced in Phase 3.
 
 **US-08 — Aspect-ratio-aware sizing** · S · US-21
 - Keep page aspect correct regardless of source page dimensions.
