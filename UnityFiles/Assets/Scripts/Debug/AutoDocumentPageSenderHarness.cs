@@ -34,6 +34,7 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     [Header("Transport simulation")]
     [SerializeField] private int chunkSizeBytes = 16 * 1024;
     [SerializeField] private bool sendFirstPageOnSessionStart = true;
+    [SerializeField] private bool autoStartSessionOnEnable = true;
     [SerializeField] private bool listenToNavigateApplied = true;
     [SerializeField] private bool listenToRequestPageIntent = true;
 
@@ -43,10 +44,17 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     private static readonly Regex PageRegex = new Regex(@"page-(\d{4})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private List<TextAsset> _resolvedPages = new List<TextAsset>();
+    private bool _sessionStarted;
 
     private void OnEnable()
     {
         Attach();
+
+        if (autoStartSessionOnEnable && !_sessionStarted)
+        {
+            StartSessionAndSendFirstPage();
+            _sessionStarted = true;
+        }
     }
 
     private void OnDisable()
@@ -94,6 +102,7 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         };
 
         documentManager.HandleMessage(root.ToString(Newtonsoft.Json.Formatting.None));
+        _sessionStarted = false;
 
         if (verboseLogs)
             Debug.Log($"AutoDocumentPageSenderHarness: sent document-close for '{documentId}'.");

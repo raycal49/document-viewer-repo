@@ -19,5 +19,5 @@ Use page-number suffixes so auto-sort works:
 ## Notes
 
 - Files should import as `TextAsset` (recommended `.bytes` extension).
-- In the harness inspector, add these assets to `unorderedAssets`.
+- Use `Assets/Prefabs/DocumentNavigationHarnessRig.prefab` and assign these files to `unorderedAssets`.
 - Keep `autoSortFromNames = true`.
