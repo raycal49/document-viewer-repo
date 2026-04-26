@@ -16,24 +16,13 @@ public class PdfPageDisplay : MonoBehaviour
 
     private void Awake()
     {
-        _quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        _quad.name = "PdfPageQuad";
-        _quad.transform.SetParent(transform);
-        _quad.transform.localPosition = Vector3.zero;
-        _quad.transform.localRotation = Quaternion.identity;
-        _quad.transform.localScale = new Vector3(0.8f, 1.067f, 1f); // portrait default (letter ratio)
-
-        _material = new Material(Shader.Find("Unlit/Texture"));
-        _quad.GetComponent<Renderer>().material = _material;
-        _quad.SetActive(false);
+        EnsureInitialized();
     }
 
     private void Start()
     {
         if (!_isDevMode)
-        {
             return;
-        }
 
         if (_testTexture != null)
         {
@@ -53,9 +42,9 @@ public class PdfPageDisplay : MonoBehaviour
     public void Show(Texture2D tex)
     {
         if (tex == null)
-        {
             return;
-        }
+
+        EnsureInitialized();
 
         _currentTexture = tex;
         _material.mainTexture = tex;
@@ -109,13 +98,29 @@ public class PdfPageDisplay : MonoBehaviour
         }
 
         if (_testJpegBytes != null)
-        {
             ShowFromBytes(_testJpegBytes.bytes, 0, 0);
-        }
+    }
+
+    private void EnsureInitialized()
+    {
+        if (_quad != null && _material != null)
+            return;
+
+        _quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        _quad.name = "PdfPageQuad";
+        _quad.transform.SetParent(transform);
+        _quad.transform.localPosition = Vector3.zero;
+        _quad.transform.localRotation = Quaternion.identity;
+        _quad.transform.localScale = new Vector3(0.8f, 1.067f, 1f); // portrait default (letter ratio)
+
+        _material = new Material(Shader.Find("Unlit/Texture"));
+        _quad.GetComponent<Renderer>().material = _material;
+        _quad.SetActive(false);
     }
 
     private void OnDestroy()
     {
-        if (_material != null) Destroy(_material);
+        if (_material != null)
+            Destroy(_material);
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -56,12 +57,17 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     private void OnEnable()
     {
         Attach();
+    }
 
-        if (autoStartSessionOnEnable && !_sessionStarted)
-        {
-            StartSessionAndSendFirstPage();
-            _sessionStarted = true;
-        }
+    private IEnumerator Start()
+    {
+        if (!autoStartSessionOnEnable || _sessionStarted)
+            yield break;
+
+        // Let dependent components finish Awake/OnEnable before first send.
+        yield return null;
+
+        _sessionStarted = TryStartSessionAndSendFirstPage();
     }
 
     private void OnDisable()
@@ -80,20 +86,27 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     [ContextMenu("Start Session + First Page")]
     public void StartSessionAndSendFirstPage()
     {
+        _sessionStarted = TryStartSessionAndSendFirstPage();
+    }
+
+    private bool TryStartSessionAndSendFirstPage()
+    {
         if (!ValidateCoreReferences())
-            return;
+            return false;
 
         ResolvePages();
         if (_resolvedPages.Count == 0)
         {
             Debug.LogError("AutoDocumentPageSenderHarness: no page assets resolved.");
-            return;
+            return false;
         }
 
         SendDocumentStart(_resolvedPages.Count);
 
         if (sendFirstPageOnSessionStart)
             SendPageByZeroBasedIndex(0);
+
+        return true;
     }
 
     [ContextMenu("Close Session")]
