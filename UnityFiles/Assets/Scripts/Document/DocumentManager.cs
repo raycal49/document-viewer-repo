@@ -14,6 +14,7 @@ public class DocumentManager : MonoBehaviour
     public event Action<DocumentStartMessage> OnDocumentStart;
     public event Action<DocumentPageMessage> OnDocumentPage;
     public event Action<DocumentCloseMessage> OnDocumentClose;
+    public event Action<string> OnRawJsonReceived;
 
     public bool IsDocumentOpen => _sessionState.IsDocumentOpen;
     public string CurrentDocumentId => _sessionState.CurrentDocumentId;
@@ -49,6 +50,8 @@ public class DocumentManager : MonoBehaviour
 
         if (string.IsNullOrWhiteSpace(json))
             return;
+
+        OnRawJsonReceived?.Invoke(json);
 
         JObject root;
         try
