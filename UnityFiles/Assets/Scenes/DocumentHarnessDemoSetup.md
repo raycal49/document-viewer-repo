@@ -25,9 +25,24 @@ It already includes and wires:
 - **B button** (`OVRInput.Button.Two`): previous page
 - Existing UI/button hooks continue to work via `DocumentNavigationControls` methods.
 
+## Plan A microgesture setup (Meta XR v85+)
+
+Add `DocumentMicrogestureSwipeControls` to your document rig GameObject and assign:
+
+- `navigationController` -> `DocumentNavigationController`
+- `leftHandGestures` -> GameObject with `OVRMicrogestureEventSource` + left `OVRHand`
+- `rightHandGestures` -> GameObject with `OVRMicrogestureEventSource` + right `OVRHand`
+
+Then choose gesture mappings in Inspector:
+
+- `previousPageGesture` -> gesture you want for previous page
+- `nextPageGesture` -> gesture you want for next page
+
+Use cooldown + optional logging in the component to reduce false repeats.
+
 ## JSON observability
 
-`AutoDocumentPageSenderHarness` now logs both sent and received JSON traffic:
+`AutoDocumentPageSenderHarness` logs both sent and received JSON traffic:
 
 - sent document payloads (`document-start`, `document-page`, `document-close`)
 - sent/received navigation channel payloads
@@ -43,6 +58,6 @@ Use these inspector fields on `AutoDocumentPageSenderHarness`:
 
 1. Enter Play Mode.
 2. Harness auto-starts (`autoStartSessionOnEnable`) and sends `document-start` + page 1.
-3. Press A/B to navigate.
+3. Press A/B or perform mapped microgesture to navigate.
 4. Harness auto-sends chunked `document-page` payloads from local assets for each page change.
 5. Observe traffic in Console with `[AutoDocumentPageSenderHarness][sent|received][route]` prefixes.

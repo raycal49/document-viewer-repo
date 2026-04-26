@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 1140000000000000004}
   - component: {fileID: 1140000000000000005}
   - component: {fileID: 1140000000000000006}
+  - component: {fileID: 1140000000000000007}
   m_Layer: 0
   m_Name: DocumentNavigationHarnessRig
   m_TagString: Untagged
@@ -141,3 +142,26 @@ MonoBehaviour:
   prettyPrintJsonLogs: 0
   maxJsonCharacters: 0
   verboseLogs: 1
+
+--- !u!114 &1140000000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a14eef992145f084c5186648f8947f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  navigationController: {fileID: 1140000000000000004}
+  leftHandGestures: {fileID: 0}
+  rightHandGestures: {fileID: 0}
+  previousPageGesture: 0
+  nextPageGesture: 1
+  previousGestureSource: microgesture-prev
+  nextGestureSource: microgesture-next
+  cooldownSeconds: 0.35
+  logAcceptedGestures: 1
+  logIgnoredGestures: 0
