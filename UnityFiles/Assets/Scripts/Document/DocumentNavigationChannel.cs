@@ -9,6 +9,7 @@ public class DocumentNavigationChannel : MonoBehaviour
     public event Action<DocumentNavigateMessage> OnNavigateReceived;
     public event Action<DocumentRequestPageMessage> OnRequestPageReceived;
     public event Action<string> OnOutboundMessageSerialized;
+    public event Action<string> OnInboundMessageObserved;
 
     private RTCDataChannel _dataChannel;
 
@@ -21,6 +22,8 @@ public class DocumentNavigationChannel : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(json))
             return false;
+
+        OnInboundMessageObserved?.Invoke(json);
 
         JObject root;
         try

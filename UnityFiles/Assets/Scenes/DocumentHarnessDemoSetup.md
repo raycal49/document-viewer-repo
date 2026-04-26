@@ -1,0 +1,44 @@
+# Document Harness Demo Setup
+
+A pre-wired prefab is available at:
+
+- `Assets/Prefabs/DocumentNavigationHarnessRig.prefab`
+
+It already includes and wires:
+
+- `PdfPageDisplay`
+- `DocumentManager`
+- `DocumentNavigationChannel`
+- `DocumentNavigationController`
+- `DocumentNavigationControls`
+- `AutoDocumentPageSenderHarness`
+- `DocumentJsonTrafficLogger`
+
+## What you still need to furnish
+
+1. Put your manual page assets in `Assets/Manuals/ExecSummary/`.
+2. Ensure filenames include page suffixes like `exec_summary_page-0001.bytes`.
+3. In the prefab instance, assign those files to `AutoDocumentPageSenderHarness.unorderedAssets`.
+
+## JSON observability
+
+`DocumentJsonTrafficLogger` is pre-wired in the prefab and logs:
+
+- `NAV-OUT` for outbound navigation JSON (`document-navigate` / `document-request-page`)
+- `NAV-IN` for inbound navigation JSON entering `DocumentNavigationChannel`
+- `DOC-IN` for raw JSON entering `DocumentManager` (`document-start/page/close`)
+
+You can toggle timestamp and pretty-print formatting in the logger component.
+
+## Runtime controls
+
+- **A button** (`OVRInput.Button.One`): next page
+- **B button** (`OVRInput.Button.Two`): previous page
+- Existing UI/button hooks continue to work via `DocumentNavigationControls` methods.
+
+## Expected flow
+
+1. Enter Play Mode.
+2. Harness auto-starts (`autoStartSessionOnEnable`) and sends `document-start` + page 1.
+3. Press A/B to navigate.
+4. Harness auto-sends chunked `document-page` payloads from local assets for each page change.
