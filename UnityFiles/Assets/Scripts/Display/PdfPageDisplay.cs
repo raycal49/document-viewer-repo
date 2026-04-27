@@ -9,8 +9,6 @@ public class PdfPageDisplay : MonoBehaviour
     [Header("Display surface")]
     [Tooltip("Renderer that displays decoded PDF page textures (typically PdfPageQuad's MeshRenderer).")]
     [SerializeField] private Renderer pageRenderer;
-    [Tooltip("Legacy fallback only. When enabled and no Renderer is assigned/found, a Quad is auto-created under this object.")]
-    [SerializeField] private bool allowLegacyAutoCreateSurface = true;
     [Tooltip("Optional Texture2D test source. If assigned, this takes priority in dev mode.")]
     [SerializeField] private Texture2D _testTexture;
     [Tooltip("Optional raw JPEG bytes test source (TextAsset). Used when Test Texture is not assigned.")]
@@ -124,21 +122,9 @@ public class PdfPageDisplay : MonoBehaviour
     private bool EnsureInitialized()
     {
         if (pageRenderer == null)
-            pageRenderer = GetComponentInChildren<Renderer>(includeInactive: true);
-
-        if (pageRenderer == null)
         {
-            if (!allowLegacyAutoCreateSurface)
-            {
-                Debug.LogError("PdfPageDisplay: no Renderer assigned/found for display surface. Assign PdfPageQuad renderer in Inspector.");
-                return false;
-            }
-
-            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            quad.name = "PdfPageQuad";
-            quad.transform.SetParent(transform, worldPositionStays: false);
-            pageRenderer = quad.GetComponent<Renderer>();
-            Debug.LogWarning("PdfPageDisplay: auto-created legacy PdfPageQuad fallback. Prefer assigning a scene/prefab-authored renderer.");
+            Debug.LogError("PdfPageDisplay: pageRenderer is not assigned. Assign PdfPageQuad renderer in Inspector.");
+            return false;
         }
 
         if (_material != null)

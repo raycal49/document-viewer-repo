@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// Basic toolbar wiring for the document panel structure:
@@ -23,13 +22,9 @@ public class DocumentPanelToolbar : MonoBehaviour
     [SerializeField] private DocumentManager documentManager;
     [SerializeField] private DocumentNavigationControls navigationControls;
 
-    [Header("Toolbar UI")]
-    [SerializeField] private Button previousButton;
+    [Header("Toolbar UI (wire in Inspector)")]
     [SerializeField] private TMP_Text pageNumberLabel;
-    [SerializeField] private Button nextButton;
-    [SerializeField] private Button zoomOutButton;
     [SerializeField] private TMP_Text zoomPercentLabel;
-    [SerializeField] private Button zoomInButton;
 
     [Header("Zoom (UI-only)")]
     [SerializeField] private int defaultZoomPercent = 100;
@@ -41,49 +36,26 @@ public class DocumentPanelToolbar : MonoBehaviour
 
     private void Awake()
     {
-        AutoWireMissingReferences();
         _zoomPercent = Mathf.Clamp(defaultZoomPercent, minZoomPercent, maxZoomPercent);
         RefreshLabels();
     }
 
     private void OnEnable()
     {
-        WireButtons(true);
         WireDocumentEvents(true);
         RefreshLabels();
     }
 
     private void OnDisable()
     {
-        WireButtons(false);
         WireDocumentEvents(false);
     }
 
-    private void WireButtons(bool subscribe)
+    private void OnValidate()
     {
-        if (previousButton != null)
-        {
-            if (subscribe) previousButton.onClick.AddListener(HandlePreviousClicked);
-            else previousButton.onClick.RemoveListener(HandlePreviousClicked);
-        }
-
-        if (nextButton != null)
-        {
-            if (subscribe) nextButton.onClick.AddListener(HandleNextClicked);
-            else nextButton.onClick.RemoveListener(HandleNextClicked);
-        }
-
-        if (zoomOutButton != null)
-        {
-            if (subscribe) zoomOutButton.onClick.AddListener(HandleZoomOutClicked);
-            else zoomOutButton.onClick.RemoveListener(HandleZoomOutClicked);
-        }
-
-        if (zoomInButton != null)
-        {
-            if (subscribe) zoomInButton.onClick.AddListener(HandleZoomInClicked);
-            else zoomInButton.onClick.RemoveListener(HandleZoomInClicked);
-        }
+        _zoomPercent = Mathf.Clamp(_zoomPercent <= 0 ? defaultZoomPercent : _zoomPercent, minZoomPercent, maxZoomPercent);
+        if (!Application.isPlaying)
+            RefreshLabels();
     }
 
     private void WireDocumentEvents(bool subscribe)
@@ -120,7 +92,7 @@ public class DocumentPanelToolbar : MonoBehaviour
         RefreshPageLabel();
     }
 
-    private void HandlePreviousClicked()
+    public void OnPreviousPressed()
     {
         if (navigationControls == null)
         {
@@ -132,7 +104,7 @@ public class DocumentPanelToolbar : MonoBehaviour
         RefreshPageLabel();
     }
 
-    private void HandleNextClicked()
+    public void OnNextPressed()
     {
         if (navigationControls == null)
         {
@@ -144,13 +116,13 @@ public class DocumentPanelToolbar : MonoBehaviour
         RefreshPageLabel();
     }
 
-    private void HandleZoomOutClicked()
+    public void OnZoomOutPressed()
     {
         _zoomPercent = Mathf.Clamp(_zoomPercent - Mathf.Max(1, zoomStepPercent), minZoomPercent, maxZoomPercent);
         RefreshZoomLabel();
     }
 
-    private void HandleZoomInClicked()
+    public void OnZoomInPressed()
     {
         _zoomPercent = Mathf.Clamp(_zoomPercent + Mathf.Max(1, zoomStepPercent), minZoomPercent, maxZoomPercent);
         RefreshZoomLabel();
@@ -184,41 +156,4 @@ public class DocumentPanelToolbar : MonoBehaviour
         zoomPercentLabel.text = $"{_zoomPercent}%";
     }
 
-    private void AutoWireMissingReferences()
-    {
-        if (documentManager == null)
-            documentManager = GetComponentInParent<DocumentManager>();
-
-        if (navigationControls == null)
-            navigationControls = GetComponentInParent<DocumentNavigationControls>();
-
-        if (previousButton == null)
-            previousButton = FindChildComponentByName<Button>("PreviousButton");
-        if (pageNumberLabel == null)
-            pageNumberLabel = FindChildComponentByName<TMP_Text>("PageNumberLabel");
-        if (nextButton == null)
-            nextButton = FindChildComponentByName<Button>("NextButton");
-        if (zoomOutButton == null)
-            zoomOutButton = FindChildComponentByName<Button>("ZoomOutButton");
-        if (zoomPercentLabel == null)
-            zoomPercentLabel = FindChildComponentByName<TMP_Text>("ZoomPercentLabel");
-        if (zoomInButton == null)
-            zoomInButton = FindChildComponentByName<Button>("ZoomInButton");
-    }
-
-    private T FindChildComponentByName<T>(string objectName) where T : Component
-    {
-        var children = GetComponentsInChildren<Transform>(includeInactive: true);
-        foreach (var child in children)
-        {
-            if (!string.Equals(child.name, objectName))
-                continue;
-
-            var component = child.GetComponent<T>();
-            if (component != null)
-                return component;
-        }
-
-        return null;
-    }
 }

@@ -31,7 +31,24 @@ DocumentPanelRoot
     └── ZoomInButton
 ```
 
-`PdfPageDisplay` now supports assigning the renderer explicitly (recommended). If no renderer is assigned/found, it can still create a legacy fallback quad.
+`PdfPageDisplay.pageRenderer` should be assigned explicitly to your `PdfPageQuad` renderer in the Inspector.
+
+## Inspector wiring (editor-first)
+
+Wire references in Inspector rather than relying on runtime auto-wiring:
+
+- `PdfPageDisplay.pageRenderer` -> `PdfPageQuad` `MeshRenderer`
+- `DocumentPanelToolbar.documentManager` -> `DocumentManager`
+- `DocumentPanelToolbar.navigationControls` -> `DocumentNavigationControls`
+- `DocumentPanelToolbar.pageNumberLabel` -> `PageNumberLabel` (`TMP_Text`)
+- `DocumentPanelToolbar.zoomPercentLabel` -> `ZoomPercentLabel` (`TMP_Text`)
+
+Then wire button `OnClick` events in the Unity Editor:
+
+- `PreviousButton` -> `DocumentPanelToolbar.OnPreviousPressed`
+- `NextButton` -> `DocumentPanelToolbar.OnNextPressed`
+- `ZoomOutButton` -> `DocumentPanelToolbar.OnZoomOutPressed`
+- `ZoomInButton` -> `DocumentPanelToolbar.OnZoomInPressed`
 
 ## What you still need to furnish
 

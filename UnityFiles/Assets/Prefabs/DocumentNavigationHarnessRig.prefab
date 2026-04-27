@@ -52,6 +52,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _isDevMode: 0
+  pageRenderer: {fileID: 0}
   _testTexture: {fileID: 0}
   _testJpegBytes: {fileID: 0}
 --- !u!114 &1140000000000000002
@@ -180,12 +181,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   documentManager: {fileID: 1140000000000000002}
   navigationControls: {fileID: 1140000000000000005}
-  previousButton: {fileID: 0}
   pageNumberLabel: {fileID: 0}
-  nextButton: {fileID: 0}
-  zoomOutButton: {fileID: 0}
   zoomPercentLabel: {fileID: 0}
-  zoomInButton: {fileID: 0}
   defaultZoomPercent: 100
   minZoomPercent: 50
   maxZoomPercent: 200
