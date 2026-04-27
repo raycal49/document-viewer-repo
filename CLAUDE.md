@@ -223,11 +223,13 @@ No mandatory test quota per story; test where risk and ROI justify it.
 **US-07 — Editor harness for chunk flow** · S · US-16
 - Feed fake start/page chunks into `DocumentManager` without backend/web.
 - Implemented as `DocumentChunkFlowHarness` with in-order, out-of-order, duplicate-chunk, close, and full happy-path ContextMenu actions.
+- Status: ✅ Done
 
 ### Phase 3 — Navigation and sync semantics
 
 **US-13 — Quest page controls wired to data channel** · M · US-05
 - Prev/Next/jump send `document-navigate` or `document-request-page`.
+- Status: ✅ Done
 
 **US-19 — `TMP_InputField` click-to-jump** · S · US-13
 - Validate/bounds-clamp input and route through same navigation path.
@@ -248,6 +250,7 @@ No mandatory test quota per story; test where risk and ROI justify it.
 
 **US-10 — Meta XR interaction spike** · M · no deps
 - Validate grab + poke ergonomics on device.
+- Status: ✅ Done
 
 **US-11 — Grab-and-place Quad** · M · US-09, US-10
 - Parent Canvas with Quad so controls move together.
@@ -276,10 +279,10 @@ No mandatory test quota per story; test where risk and ROI justify it.
 | US-07 | Editor harness for chunk flow | ✅ Done |
 | US-08 | Aspect-ratio-aware Quad sizing | — |
 | US-09 | First-show placement in front of head | — |
-| US-10 | Meta XR SDK spike | — |
+| US-10 | Meta XR SDK spike | ✅ Done |
 | US-11 | Grab-and-place the Quad | — |
 | US-12 | HTTP POST helper | ❌ Dropped |
-| US-13 | Quest navigation controls over data channel | — |
+| US-13 | Quest navigation controls over data channel | ✅ Done |
 | US-14 | Texture lifecycle + loading + errors | — |
 | US-15 | Dedicated `documents` data channel | ✅ Done |
 | US-16 | Chunk reassembly + JPEG decode | ✅ Done |
