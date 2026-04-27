@@ -11,7 +11,27 @@ It already includes and wires:
 - `DocumentNavigationChannel`
 - `DocumentNavigationController`
 - `DocumentNavigationControls`
+- `DocumentPanelToolbar` (toolbar wiring for Prev/Next + page label + UI-only zoom label/buttons)
 - `AutoDocumentPageSenderHarness`
+
+## Recommended panel hierarchy
+
+Create/author your visual hierarchy in-editor under the rig root (world transform remains editor-owned):
+
+```
+DocumentPanelRoot
+├── BackplatePlane / BackplateQuad
+├── PdfPageQuad
+└── ToolbarCanvas
+    ├── PreviousButton
+    ├── PageNumberLabel
+    ├── NextButton
+    ├── ZoomOutButton
+    ├── ZoomPercentLabel
+    └── ZoomInButton
+```
+
+`PdfPageDisplay` now supports assigning the renderer explicitly (recommended). If no renderer is assigned/found, it can still create a legacy fallback quad.
 
 ## What you still need to furnish
 

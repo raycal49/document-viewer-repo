@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 1140000000000000005}
   - component: {fileID: 1140000000000000006}
   - component: {fileID: 1140000000000000007}
+  - component: {fileID: 1140000000000000008}
   m_Layer: 0
   m_Name: DocumentNavigationHarnessRig
   m_TagString: Untagged
@@ -165,3 +166,27 @@ MonoBehaviour:
   cooldownSeconds: 0.35
   logAcceptedGestures: 1
   logIgnoredGestures: 0
+--- !u!114 &1140000000000000008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c3ff9c1594c4f5a896e5a55f419764e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  documentManager: {fileID: 1140000000000000002}
+  navigationControls: {fileID: 1140000000000000005}
+  previousButton: {fileID: 0}
+  pageNumberLabel: {fileID: 0}
+  nextButton: {fileID: 0}
+  zoomOutButton: {fileID: 0}
+  zoomPercentLabel: {fileID: 0}
+  zoomInButton: {fileID: 0}
+  defaultZoomPercent: 100
+  minZoomPercent: 50
+  maxZoomPercent: 200
+  zoomStepPercent: 25

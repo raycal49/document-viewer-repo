@@ -6,14 +6,19 @@ public class PdfPageDisplay : MonoBehaviour
     [Tooltip("When enabled, the component auto-renders a test source in Start().")]
     [SerializeField] private bool _isDevMode;
     [SerializeField] private Material pageMaterialTemplate;
+    [Header("Display surface")]
+    [Tooltip("Renderer that displays decoded PDF page textures (typically PdfPageQuad's MeshRenderer).")]
+    [SerializeField] private Renderer pageRenderer;
+    [Tooltip("Legacy fallback only. When enabled and no Renderer is assigned/found, a Quad is auto-created under this object.")]
+    [SerializeField] private bool allowLegacyAutoCreateSurface = true;
     [Tooltip("Optional Texture2D test source. If assigned, this takes priority in dev mode.")]
     [SerializeField] private Texture2D _testTexture;
     [Tooltip("Optional raw JPEG bytes test source (TextAsset). Used when Test Texture is not assigned.")]
     [SerializeField] private TextAsset _testJpegBytes;
 
-    private GameObject _quad;
     private Material _material;
     private Texture2D _currentTexture;
+    private bool _ownsCurrentTexture;
 
     private void Awake()
     {
@@ -45,11 +50,15 @@ public class PdfPageDisplay : MonoBehaviour
         if (tex == null)
             return;
 
-        EnsureInitialized();
+        if (!EnsureInitialized())
+            return;
+
+        ReleaseOwnedTextureIfAny();
 
         _currentTexture = tex;
+        _ownsCurrentTexture = false;
         _material.mainTexture = tex;
-        _quad.SetActive(true);
+        pageRenderer.gameObject.SetActive(true);
     }
 
     public void ShowFromBytes(byte[] jpegBytes, int width, int height)
@@ -65,7 +74,17 @@ public class PdfPageDisplay : MonoBehaviour
             Debug.LogWarning($"PdfPageDisplay: decoded dimensions ({decodedTexture.width}x{decodedTexture.height}) do not match payload metadata ({width}x{height}).");
         }
 
-        Show(decodedTexture);
+        if (!EnsureInitialized())
+        {
+            Destroy(decodedTexture);
+            return;
+        }
+
+        ReleaseOwnedTextureIfAny();
+        _currentTexture = decodedTexture;
+        _ownsCurrentTexture = true;
+        _material.mainTexture = decodedTexture;
+        pageRenderer.gameObject.SetActive(true);
     }
 
     public static bool TryDecodeJpegBytes(byte[] jpegBytes, out Texture2D decodedTexture)
@@ -102,17 +121,28 @@ public class PdfPageDisplay : MonoBehaviour
             ShowFromBytes(_testJpegBytes.bytes, 0, 0);
     }
 
-    private void EnsureInitialized()
+    private bool EnsureInitialized()
     {
-        if (_quad != null && _material != null)
-            return;
+        if (pageRenderer == null)
+            pageRenderer = GetComponentInChildren<Renderer>(includeInactive: true);
 
-        _quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        _quad.name = "PdfPageQuad";
-        _quad.transform.SetParent(transform);
-        _quad.transform.localPosition = Vector3.zero;
-        _quad.transform.localRotation = Quaternion.identity;
-        _quad.transform.localScale = new Vector3(0.8f, 1.067f, 1f); // portrait default (letter ratio)
+        if (pageRenderer == null)
+        {
+            if (!allowLegacyAutoCreateSurface)
+            {
+                Debug.LogError("PdfPageDisplay: no Renderer assigned/found for display surface. Assign PdfPageQuad renderer in Inspector.");
+                return false;
+            }
+
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = "PdfPageQuad";
+            quad.transform.SetParent(transform, worldPositionStays: false);
+            pageRenderer = quad.GetComponent<Renderer>();
+            Debug.LogWarning("PdfPageDisplay: auto-created legacy PdfPageQuad fallback. Prefer assigning a scene/prefab-authored renderer.");
+        }
+
+        if (_material != null)
+            return true;
 
         if (pageMaterialTemplate != null)
         {
@@ -124,17 +154,30 @@ public class PdfPageDisplay : MonoBehaviour
             if (shader == null)
             {
                 Debug.LogError("[PdfPageDisplay] Missing shader and no pageMaterialTemplate assigned.");
-                return;
+                return false;
             }
             _material = new Material(shader);
         }
 
-        _quad.GetComponent<Renderer>().material = _material;
-        _quad.SetActive(false);
+        pageRenderer.material = _material;
+        pageRenderer.gameObject.SetActive(false);
+        return true;
+    }
+
+    private void ReleaseOwnedTextureIfAny()
+    {
+        if (!_ownsCurrentTexture || _currentTexture == null)
+            return;
+
+        Destroy(_currentTexture);
+        _currentTexture = null;
+        _ownsCurrentTexture = false;
     }
 
     private void OnDestroy()
     {
+        ReleaseOwnedTextureIfAny();
+
         if (_material != null)
             Destroy(_material);
     }
