@@ -5,6 +5,7 @@ public class PdfPageDisplay : MonoBehaviour
     [Header("Dev bootstrap")]
     [Tooltip("When enabled, the component auto-renders a test source in Start().")]
     [SerializeField] private bool _isDevMode;
+    [SerializeField] private Material pageMaterialTemplate;
     [Tooltip("Optional Texture2D test source. If assigned, this takes priority in dev mode.")]
     [SerializeField] private Texture2D _testTexture;
     [Tooltip("Optional raw JPEG bytes test source (TextAsset). Used when Test Texture is not assigned.")]
@@ -113,7 +114,21 @@ public class PdfPageDisplay : MonoBehaviour
         _quad.transform.localRotation = Quaternion.identity;
         _quad.transform.localScale = new Vector3(0.8f, 1.067f, 1f); // portrait default (letter ratio)
 
-        _material = new Material(Shader.Find("Unlit/Texture"));
+        if (pageMaterialTemplate != null)
+        {
+            _material = new Material(pageMaterialTemplate);
+        }
+        else
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Texture");
+            if (shader == null)
+            {
+                Debug.LogError("[PdfPageDisplay] Missing shader and no pageMaterialTemplate assigned.");
+                return;
+            }
+            _material = new Material(shader);
+        }
+
         _quad.GetComponent<Renderer>().material = _material;
         _quad.SetActive(false);
     }
