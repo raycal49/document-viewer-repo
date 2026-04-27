@@ -1,5 +1,81 @@
 # Document Viewer — Project Context
 
+## Overall app summary
+
+This application is a remote-assistance document viewer for a Quest 3 technician + web-based expert workflow:
+
+- The HQ expert (web app) picks a PDF manual (from Azure-backed document listing).
+- The web app renders PDF pages and sends them to Quest over a dedicated WebRTC `documents` data channel.
+- The Quest user sees that document as a texture on a world-space Quad in AR.
+- Both sides can navigate pages (with follow/sync behavior), while backend mainly handles signaling + document list, not page-image delivery in v1.
+
+In short: it’s a low-latency, in-call shared PDF surface for field support in XR.
+
+## What the UI is going to be for
+
+The Quest UI is the interaction layer around the document surface (not direct interaction on the PDF itself, at least in v1). Its purpose is to make document control ergonomic in mixed reality.
+
+Core goals of the UI:
+
+- Navigation controls: prev/next, jump to page, page status (`X / Y`)
+- Session context: document title, follow/sync toggle
+- Spatial usability: allow the user to position the panel in physical space
+- Interaction consistency: all page changes happen through explicit controls, not by touching page content
+
+## How your Meta Set UI idea fits
+
+Your plan to start with `EmptyUIBackplateWithCanvas` and add Meta Set UI buttons is a strong fit for this architecture:
+
+- It naturally supports a world-space control panel attached to/near the document.
+- It sets you up for both near/far interaction (poke + ray) and hand/controller workflows.
+- It gives a clean path from current v1 controls to your planned features:
+  - zoom in/out
+  - collapsible panel
+  - ray grab / poke
+  - grab/fix (head-locked mode)
+  - unfix (world-locked mode)
+  - normal poking interaction
+
+So conceptually, your UI is becoming a document control console in XR: first for navigation and sync, then expanded for comfort/ergonomics and spatial interaction modes.
+
+## UI-relevant progress status
+
+For UI-relevant progress only, here’s what’s already in place for the document viewer display.
+
+### What’s already done (relevant to UI)
+
+- Document surface rendering is in place via `PdfPageDisplay`:
+  - Creates/manages a world-space Quad (`PdfPageQuad`)
+  - Applies a material/texture
+  - Supports rendering from JPEG bytes through `ShowFromBytes(...)`
+  - So the “thing you control with UI” (the visible page surface) already exists.
+- Navigation interaction logic is implemented in `DocumentNavigationController`:
+  - `NavigatePrevious()`, `NavigateNext()`, `NavigateToPage(...)`, `RequestPage(...)`
+  - Handles inbound/outbound navigation events and applies page index changes.
+  - This is the core behavior your UI buttons/input will call.
+- UI hook methods already exist in `DocumentNavigationControls`:
+  - `OnPrevPressed()`
+  - `OnNextPressed()`
+  - `OnJumpSubmitted(string pageText)` (1-based user input → 0-based page index)
+  - Plus optional Quest A/B button shortcuts with debounce.
+  - This means button/input wiring points are already prepared.
+- Alternative input path exists (`DocumentMicrogestureSwipeControls`):
+  - Gesture-to-prev/next mapping is already scaffolded.
+  - Not your primary Meta Set UI path, but relevant for interaction modes.
+- Integration harness/prefab exists:
+  - `DocumentNavigationHarnessRig.prefab` wires display + manager + navigation scripts together for iteration/debug.
+  - Good base to verify event flow before full polished UI.
+
+### What is not done yet (UI side)
+
+- The actual polished world-space Canvas UI overlay (the visual panel with title, page field, prev/next, follow toggle) is still pending.
+- So your plan to start with `EmptyUIBackplateWithCanvas` + Meta Set UI controls is exactly the missing piece.
+- Also still pending: your planned UX features like zoom, collapsibility, fix/unfix, ray poke/grab ergonomics as production UI behavior.
+
+So, practically: rendering + navigation plumbing are ready; visual XR UI layer and interaction polish are the next step.
+
+---
+
 ## What we're building
 
 A field technician wearing a Quest 3 headset is on a call with an expert at HQ using the web app. The expert pulls up a PDF (design/repair manual) from Azure storage, and both people can view and navigate it. The Quest user sees the document on a world-locked Quad in AR and can place it in physical space.
