@@ -6,17 +6,14 @@ public class PdfPageDisplay : MonoBehaviour
     [Tooltip("When enabled, the component auto-renders a test source in Start().")]
     [SerializeField] private bool _isDevMode;
     [SerializeField] private Material pageMaterialTemplate;
-    [Header("Display surface")]
-    [Tooltip("Renderer that displays decoded PDF page textures (typically PdfPageQuad's MeshRenderer).")]
-    [SerializeField] private Renderer pageRenderer;
     [Tooltip("Optional Texture2D test source. If assigned, this takes priority in dev mode.")]
     [SerializeField] private Texture2D _testTexture;
     [Tooltip("Optional raw JPEG bytes test source (TextAsset). Used when Test Texture is not assigned.")]
     [SerializeField] private TextAsset _testJpegBytes;
 
+    private GameObject _quad;
     private Material _material;
     private Texture2D _currentTexture;
-    private bool _ownsCurrentTexture;
 
     private void Awake()
     {
@@ -48,15 +45,11 @@ public class PdfPageDisplay : MonoBehaviour
         if (tex == null)
             return;
 
-        if (!EnsureInitialized())
-            return;
-
-        ReleaseOwnedTextureIfAny();
+        EnsureInitialized();
 
         _currentTexture = tex;
-        _ownsCurrentTexture = false;
         _material.mainTexture = tex;
-        pageRenderer.gameObject.SetActive(true);
+        _quad.SetActive(true);
     }
 
     public void ShowFromBytes(byte[] jpegBytes, int width, int height)
@@ -72,17 +65,7 @@ public class PdfPageDisplay : MonoBehaviour
             Debug.LogWarning($"PdfPageDisplay: decoded dimensions ({decodedTexture.width}x{decodedTexture.height}) do not match payload metadata ({width}x{height}).");
         }
 
-        if (!EnsureInitialized())
-        {
-            Destroy(decodedTexture);
-            return;
-        }
-
-        ReleaseOwnedTextureIfAny();
-        _currentTexture = decodedTexture;
-        _ownsCurrentTexture = true;
-        _material.mainTexture = decodedTexture;
-        pageRenderer.gameObject.SetActive(true);
+        Show(decodedTexture);
     }
 
     public static bool TryDecodeJpegBytes(byte[] jpegBytes, out Texture2D decodedTexture)
@@ -119,16 +102,17 @@ public class PdfPageDisplay : MonoBehaviour
             ShowFromBytes(_testJpegBytes.bytes, 0, 0);
     }
 
-    private bool EnsureInitialized()
+    private void EnsureInitialized()
     {
-        if (pageRenderer == null)
-        {
-            Debug.LogError("PdfPageDisplay: pageRenderer is not assigned. Assign PdfPageQuad renderer in Inspector.");
-            return false;
-        }
+        if (_quad != null && _material != null)
+            return;
 
-        if (_material != null)
-            return true;
+        _quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        _quad.name = "PdfPageQuad";
+        _quad.transform.SetParent(transform);
+        _quad.transform.localPosition = Vector3.zero;
+        _quad.transform.localRotation = Quaternion.identity;
+        _quad.transform.localScale = new Vector3(0.8f, 1.067f, 1f); // portrait default (letter ratio)
 
         if (pageMaterialTemplate != null)
         {
@@ -140,30 +124,17 @@ public class PdfPageDisplay : MonoBehaviour
             if (shader == null)
             {
                 Debug.LogError("[PdfPageDisplay] Missing shader and no pageMaterialTemplate assigned.");
-                return false;
+                return;
             }
             _material = new Material(shader);
         }
 
-        pageRenderer.material = _material;
-        pageRenderer.gameObject.SetActive(false);
-        return true;
-    }
-
-    private void ReleaseOwnedTextureIfAny()
-    {
-        if (!_ownsCurrentTexture || _currentTexture == null)
-            return;
-
-        Destroy(_currentTexture);
-        _currentTexture = null;
-        _ownsCurrentTexture = false;
+        _quad.GetComponent<Renderer>().material = _material;
+        _quad.SetActive(false);
     }
 
     private void OnDestroy()
     {
-        ReleaseOwnedTextureIfAny();
-
         if (_material != null)
             Destroy(_material);
     }

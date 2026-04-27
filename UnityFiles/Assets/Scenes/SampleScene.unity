@@ -1712,8 +1712,8 @@ MonoBehaviour:
   signalingClient: {fileID: 405372166}
   peerConnectionManager: {fileID: 1231414921}
   annotationManager: {fileID: 1802755230}
-  documentManager: {fileID: 20988328422}
-  documentNavigationChannel: {fileID: 20988328423}
+  documentManager: {fileID: 0}
+  documentNavigationChannel: {fileID: 0}
   microphoneCapture: {fileID: 275638867}
   callButton: {fileID: 207147542}
   callButtonText: {fileID: 1215978396}
@@ -1859,16 +1859,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: cb5508a91b8d46888f24a2149b2e7554, type: 3}
---- !u!114 &20988328422 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1140000000000000002, guid: cb5508a91b8d46888f24a2149b2e7554, type: 3}
-  m_PrefabInstance: {fileID: 988328421}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &20988328423 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 1140000000000000003, guid: cb5508a91b8d46888f24a2149b2e7554, type: 3}
-  m_PrefabInstance: {fileID: 988328421}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1150173031
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2185,6 +2175,54 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1234567001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1234567002}
+  - component: {fileID: 1234567003}
+  m_Layer: 0
+  m_Name: PdfPageDisplay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1234567002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234567001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0.4, z: 1.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1234567003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1234567001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f83c512a7e9d4b06c12a8e3f69b74d20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _isDevMode: 0
+  pageMaterialTemplate: {fileID: 2100000, guid: 2707e023b21bb154a92ef5841267fdc6, type: 2}
+  _testTexture: {fileID: 0}
+  _testJpegBytes: {fileID: 0}
 --- !u!1 &1280835813
 GameObject:
   m_ObjectHideFlags: 0
