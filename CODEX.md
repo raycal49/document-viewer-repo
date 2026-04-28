@@ -76,6 +76,176 @@ So, practically: rendering + navigation plumbing are ready; visual XR UI layer a
 
 ---
 
+## Quest 3 PDF UI vision (tentative)
+
+For **PDF viewer on Meta Quest 3**, this is the aim.
+
+> Don’t make users “discover” how to read. Reading is already cognitively heavy in VR.
+
+Meta’s own guidance is relevant here: hand tracking can feel natural, but it complements controllers and is not ideal for every precision-heavy scenario. For this application, the client has requested an emphasis on hands-free controls (gestures, micro-gestures, and poses). A PDF reader is still precision-heavy: page selection, zoom, text scanning, annotation, bookmarking, and more.
+
+### Best-practice model
+
+#### Page navigation: use three layers
+
+##### Primary: visible Next / Previous controls
+
+Put large **Previous** and **Next** buttons in a bottom toolbar.
+
+Recommended bottom toolbar layout:
+
+`[ < ]   Page current_page_number / max_page_number   [ > ]   [ - ] zoom_level_percentage% [ + ]`
+
+For Quest 3:
+
+- **Left/right controller thumbstick**: previous / next page
+- **A/B or trigger click on visible arrows**: previous / next
+- **Hand tracking**: pinch/tap visible arrows
+- **Swipe gesture**: horizontal swipe on the page to turn pages
+
+Important: **swipe should not be the only method**. In VR, gesture recognition can be less reliable, and users need visible, labeled exits and actions.
+
+#### Use page feedback
+
+Every page turn should show:
+
+`Page current_page_number / max_page_number`
+
+Use a small animated transition (slide left/right), not flashy 3D page curl.
+
+Good feedback pattern:
+
+`Page 11 / 84  ←   Page 12 / 84   →  Page 13 / 84`
+
+### Zoom: separate “document zoom” from “window resize”
+
+This is a critical UX distinction.
+
+#### Window resize
+
+Changes the size of the whole PDF panel in space.
+
+#### Document zoom
+
+Changes the scale of the PDF content inside the panel.
+
+Users need both, and they should not feel the same.
+
+Recommended zoom controls:
+
+```text
+[ - ]  125%  [ + ]
+```
+
+### Best zoom interactions for Quest 3
+
+#### Controller UX
+
+Use:
+
+- Trigger/select on `+` and `-`
+- Thumbstick up/down (or right-stick up/down) for zoom
+- Grip + move controller closer/farther as an advanced spatial shortcut
+
+Do **not** rely only on physically leaning in. That is user effort, not zoom.
+
+#### Hand tracking UX
+
+Use:
+
+- Press/Ray Press `+` and `-`
+- Two-hand pinch-and-spread to zoom in
+- Two-hand pinch-and-close to zoom out
+- Press/Ray Press on zoom percentage to open a zoom picker
+
+Keep visible zoom buttons. Gestures are accelerators, not the foundation.
+
+### Zoom should focus on where the user is looking or pointing
+
+Bad zoom:
+
+> User zooms in and the document randomly scales from the center.
+
+Good zoom:
+
+> User points at a paragraph, zooms, and that paragraph stays under pointer/gaze.
+
+Mental model:
+
+- Zoom toward intent
+- Not toward the page center
+
+### Placement mode: Anchored vs Follow
+
+Offer two positioning modes:
+
+`[ Anchored ]` or `[ Follow ]`
+
+**Anchored** means the PDF stays in one place in the room (default).
+
+Best for:
+
+- Longer reading sessions
+- Comfortable seated reading
+- Dense text and diagrams
+- Users who want the document to feel object-like in space
+
+**Follow** means the PDF moves with user head/view.
+
+Best for:
+
+- Quick reference
+- Reading while standing
+- Users who move often
+- Short-form instructions
+
+Do not aggressively glue to center-of-view. Use soft-follow behavior with smoothing so the panel stays available without blocking vision.
+
+### Ideal interaction stack
+
+| Action | Primary UI | Controller shortcut | Hand shortcut |
+|---|---|---|---|
+| Anchor/Follow | Top bar toggle | Select top mode label | Press/Ray Press top mode label |
+| Next page | Right arrow button | Thumbstick right | Press/Ray Press right arrow / swipe left |
+| Previous page | Left arrow button | Thumbstick left | Press/Ray Press left arrow / swipe right |
+| Zoom in | `+` button | Thumbstick up / trigger on `+` | Press/Ray Press `+` / two-hand open (tentative) |
+| Zoom out | `-` button | Thumbstick down / trigger on `-` | Press/Ray Press `-` / two-hand close (tentative) |
+| Zoom picker | Zoom number | Long press zoom button | Press/Ray Press zoom percentage |
+| Jump pages | Thumbnail rail / page number | Open page navigator | Pinch ring finger (tentative) |
+
+### Recommended UI layout
+
+Do not leave PDF floating alone with hidden gestures.
+
+```text
+                       Anchored/Follow
+┌─────────────────────────────────────────────┐
+│                                             │
+│                 PDF PAGE                    │
+│                                             │
+│                                             │
+└─────────────────────────────────────────────┘
+
+[ < ]   Page 12 / 84   [ > ]            [ - ] 125% [ + ]
+```
+
+Keep core reading controls always reachable.
+
+### Comfort rules
+
+Avoid:
+
+- Tiny toolbar icons
+- HUD-like controls stuck to the user’s face
+- Arm-raised gestures for common actions
+- Fancy page-turn animations
+- Controls that lose the user’s place
+- Long horizontal travel across huge panels
+
+Prioritize legibility, comfortable reading posture, scalable UI sizing for viewing distance, and strong contrast.
+
+---
+
 ## What we're building
 
 A field technician wearing a Quest 3 headset is on a call with an expert at HQ using the web app. The expert pulls up a PDF (design/repair manual) from Azure storage, and both people can view and navigate it. The Quest user sees the document on a world-locked Quad in AR and can place it in physical space.
