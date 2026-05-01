@@ -55,6 +55,7 @@ public class DocumentNavigationControls : MonoBehaviour
             return;
         }
 
+        Debug.Log("Prev button clicked", this);
         navigationController.NavigatePrevious(prevSource);
     }
 
@@ -66,6 +67,7 @@ public class DocumentNavigationControls : MonoBehaviour
             return;
         }
 
+        Debug.Log("Next button clicked", this);
         navigationController.NavigateNext(nextSource);
     }
 

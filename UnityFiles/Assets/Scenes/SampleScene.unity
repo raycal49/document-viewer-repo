@@ -1012,6 +1012,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &253477322 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1140000000000000005, guid: cb5508a91b8d46888f24a2149b2e7554, type: 3}
+  m_PrefabInstance: {fileID: 988328421}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb4af8324e844ce48ffeda7be27459d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &275638866
 GameObject:
   m_ObjectHideFlags: 0
@@ -3299,6 +3310,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2979117399511223966, guid: df64bf5efda75be4db0c812f9277d678, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2979117399511223966, guid: df64bf5efda75be4db0c812f9277d678, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
@@ -3498,6 +3513,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7114770130731238581, guid: df64bf5efda75be4db0c812f9277d678, type: 3}
+      propertyPath: m_ReceivesEvents
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7114770130731238583, guid: df64bf5efda75be4db0c812f9277d678, type: 3}
       propertyPath: m_Color.a
       value: 0
@@ -3647,8 +3666,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
   m_Padding:
-    m_Left: 0
-    m_Right: 0
+    m_Left: 20
+    m_Right: 20
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 0
@@ -4378,7 +4397,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1140000000000000005, guid: cb5508a91b8d46888f24a2149b2e7554, type: 3}
+      - m_Target: {fileID: 253477322}
         m_TargetAssemblyTypeName: DocumentNavigationControls, ARApp.Scripts
         m_MethodName: OnNextPressed
         m_Mode: 1
@@ -4785,7 +4804,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1140000000000000005, guid: cb5508a91b8d46888f24a2149b2e7554, type: 3}
+      - m_Target: {fileID: 253477322}
         m_TargetAssemblyTypeName: DocumentNavigationControls, ARApp.Scripts
         m_MethodName: OnPrevPressed
         m_Mode: 1
