@@ -7,7 +7,6 @@ public class DocumentNavigationController : MonoBehaviour
     [SerializeField] private DocumentNavigationChannel navigationChannel;
 
     public event Action<DocumentNavigateMessage> OnNavigateIntent;
-    public event Action<DocumentRequestPageMessage> OnRequestPageIntent;
     public event Action<DocumentNavigateMessage> OnNavigateApplied;
 
     public void Configure(DocumentManager manager, DocumentNavigationChannel channel)
@@ -54,53 +53,22 @@ public class DocumentNavigationController : MonoBehaviour
 
         var message = new DocumentNavigateMessage
         {
-            documentId = documentManager.CurrentDocumentId,
             pageIndex = clampedPageIndex,
             source = source
         };
 
-        OnNavigateIntent?.Invoke(message);
         OnNavigateApplied?.Invoke(message);
         return true;
     }
 
-    public bool RequestPage(int pageIndex)
-    {
-        if (!CanNavigate())
-            return false;
-
-        if (!documentManager.TrySetCurrentPageIndex(pageIndex, out var clampedPageIndex))
-            return false;
-
-        var message = new DocumentRequestPageMessage
-        {
-            documentId = documentManager.CurrentDocumentId,
-            pageIndex = clampedPageIndex
-        };
-
-        OnRequestPageIntent?.Invoke(message);
-        return true;
-    }
 
     private void HandleInboundNavigate(DocumentNavigateMessage message)
     {
-        if (!IsValidForCurrentDocument(message?.documentId))
-            return;
-
         if (!documentManager.TrySetCurrentPageIndex(message.pageIndex, out var clampedPageIndex))
             return;
 
         message.pageIndex = clampedPageIndex;
         OnNavigateApplied?.Invoke(message);
-    }
-
-    private void HandleInboundRequestPage(DocumentRequestPageMessage message)
-    {
-        if (!IsValidForCurrentDocument(message?.documentId))
-            return;
-
-        if (!documentManager.TrySetCurrentPageIndex(message.pageIndex, out _))
-            return;
     }
 
     private bool CanNavigate()
@@ -111,11 +79,6 @@ public class DocumentNavigationController : MonoBehaviour
             return false;
         }
 
-        if (!documentManager.IsDocumentOpen || string.IsNullOrWhiteSpace(documentManager.CurrentDocumentId))
-        {
-            Debug.LogWarning("DocumentNavigationController: no active document to navigate.");
-            return false;
-        }
 
         if (documentManager.TotalPages <= 0)
         {
@@ -126,19 +89,6 @@ public class DocumentNavigationController : MonoBehaviour
         return true;
     }
 
-    private bool IsValidForCurrentDocument(string documentId)
-    {
-        if (!CanNavigate())
-            return false;
-
-        if (!string.Equals(documentId, documentManager.CurrentDocumentId, StringComparison.Ordinal))
-        {
-            Debug.LogWarning($"DocumentNavigationController: ignoring navigation for non-active document '{documentId}'. Active='{documentManager.CurrentDocumentId}'.");
-            return false;
-        }
-
-        return true;
-    }
 
     private void AttachToChannel()
     {
@@ -146,9 +96,6 @@ public class DocumentNavigationController : MonoBehaviour
             return;
 
         navigationChannel.OnNavigateReceived += HandleInboundNavigate;
-        navigationChannel.OnRequestPageReceived += HandleInboundRequestPage;
-        OnNavigateIntent += ForwardNavigateIntent;
-        OnRequestPageIntent += ForwardRequestPageIntent;
     }
 
     private void DetachFromChannel()
@@ -157,18 +104,5 @@ public class DocumentNavigationController : MonoBehaviour
             return;
 
         navigationChannel.OnNavigateReceived -= HandleInboundNavigate;
-        navigationChannel.OnRequestPageReceived -= HandleInboundRequestPage;
-        OnNavigateIntent -= ForwardNavigateIntent;
-        OnRequestPageIntent -= ForwardRequestPageIntent;
-    }
-
-    private void ForwardNavigateIntent(DocumentNavigateMessage message)
-    {
-        navigationChannel?.SendNavigate(message);
-    }
-
-    private void ForwardRequestPageIntent(DocumentRequestPageMessage message)
-    {
-        navigationChannel?.SendRequestPage(message);
     }
 }

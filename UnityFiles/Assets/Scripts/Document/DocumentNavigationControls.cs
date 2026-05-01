@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 public class DocumentNavigationControls : MonoBehaviour
@@ -22,6 +23,8 @@ public class DocumentNavigationControls : MonoBehaviour
 
     [Tooltip("Minimum seconds between accepted A/B presses.")]
     [SerializeField] private float controllerDebounceSeconds = 0.2f;
+
+    [SerializeField] private TextMeshProUGUI pageStatusLabel;
 
     private float _nextControllerInputTime;
 

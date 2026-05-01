@@ -1,7 +1,6 @@
 public sealed class DocumentSessionState
 {
     public bool IsDocumentOpen;
-    public string CurrentDocumentId;
     public string CurrentDocumentName;
     public int TotalPages;
     public int CurrentPageIndex = -1;

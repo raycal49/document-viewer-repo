@@ -7,7 +7,6 @@ using UnityEngine;
 public class DocumentNavigationChannel : MonoBehaviour
 {
     public event Action<DocumentNavigateMessage> OnNavigateReceived;
-    public event Action<DocumentRequestPageMessage> OnRequestPageReceived;
     public event Action<string> OnInboundMessageSerialized;
     public event Action<string> OnOutboundMessageSerialized;
 
@@ -45,10 +44,6 @@ public class DocumentNavigationChannel : MonoBehaviour
                 OnNavigateReceived?.Invoke(root.ToObject<DocumentNavigateMessage>());
                 return true;
 
-            case "document-request-page":
-                OnRequestPageReceived?.Invoke(root.ToObject<DocumentRequestPageMessage>());
-                return true;
-
             default:
                 return false;
         }
@@ -57,11 +52,6 @@ public class DocumentNavigationChannel : MonoBehaviour
     public bool SendNavigate(DocumentNavigateMessage message)
     {
         return SendMessage("document-navigate", message);
-    }
-
-    public bool SendRequestPage(DocumentRequestPageMessage message)
-    {
-        return SendMessage("document-request-page", message);
     }
 
     private bool SendMessage(string type, object payload)

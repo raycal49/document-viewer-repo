@@ -12,7 +12,6 @@ public class DocumentMessageDtoTests
         var parsed = JsonUtility.FromJson<DocumentStartMessage>(json);
 
         Assert.NotNull(parsed);
-        Assert.AreEqual("doc-1", parsed.documentId);
         Assert.AreEqual("Switchgear Guide", parsed.documentName);
         Assert.AreEqual(99, parsed.totalPages);
     }
@@ -25,7 +24,6 @@ public class DocumentMessageDtoTests
         var parsed = JsonUtility.FromJson<DocumentPageMessage>(json);
 
         Assert.NotNull(parsed);
-        Assert.AreEqual("doc-1", parsed.documentId);
         Assert.AreEqual(3, parsed.pageIndex);
         Assert.AreEqual(10, parsed.totalPages);
         Assert.AreEqual(1024, parsed.width);
@@ -38,37 +36,25 @@ public class DocumentMessageDtoTests
     [Test]
     public void DocumentCloseMessage_ParsesFromJson()
     {
-        const string json = "{\"documentId\":\"doc-1\"}";
+        const string json = "{\"documentName\":\"doc-1\"}";
 
         var parsed = JsonUtility.FromJson<DocumentCloseMessage>(json);
 
         Assert.NotNull(parsed);
-        Assert.AreEqual("doc-1", parsed.documentId);
+        Assert.AreEqual("doc-1", parsed.documentName);
     }
 
     [Test]
     public void OutboundMessages_SerializeToExpectedJsonFields()
     {
-        var request = new DocumentRequestPageMessage
-        {
-            documentId = "doc-1",
-            pageIndex = 7
-        };
-
         var navigate = new DocumentNavigateMessage
         {
-            documentId = "doc-1",
             pageIndex = 8,
             source = "quest"
         };
 
-        var requestJson = JsonUtility.ToJson(request);
         var navigateJson = JsonUtility.ToJson(navigate);
 
-        StringAssert.Contains("\"documentId\":\"doc-1\"", requestJson);
-        StringAssert.Contains("\"pageIndex\":7", requestJson);
-
-        StringAssert.Contains("\"documentId\":\"doc-1\"", navigateJson);
         StringAssert.Contains("\"pageIndex\":8", navigateJson);
         StringAssert.Contains("\"source\":\"quest\"", navigateJson);
     }

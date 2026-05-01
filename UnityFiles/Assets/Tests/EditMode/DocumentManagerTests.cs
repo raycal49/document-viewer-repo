@@ -31,12 +31,10 @@ public class DocumentManagerTests
         _manager.HandleMessage(json);
 
         Assert.NotNull(observed);
-        Assert.AreEqual("doc-123", observed.documentId);
         Assert.AreEqual("Transformer Manual", observed.documentName);
         Assert.AreEqual(12, observed.totalPages);
 
         Assert.IsTrue(_manager.IsDocumentOpen);
-        Assert.AreEqual("doc-123", _manager.CurrentDocumentId);
         Assert.AreEqual("Transformer Manual", _manager.CurrentDocumentName);
         Assert.AreEqual(12, _manager.TotalPages);
         Assert.AreEqual(0, _manager.CurrentPageIndex);
@@ -60,7 +58,6 @@ public class DocumentManagerTests
         _manager.HandleMessage(chunk1);
 
         Assert.NotNull(observed);
-        Assert.AreEqual("doc-123", observed.documentId);
         Assert.AreEqual(1, observed.pageIndex);
         Assert.AreEqual(1, observed.totalChunks);
         CollectionAssert.AreEqual(new byte[] { 1, 2, 3, 4 }, observed.data);
@@ -129,7 +126,7 @@ public class DocumentManagerTests
     [Test]
     public void HandleMessage_DocumentClose_InvokesCloseEventAndClearsState()
     {
-        const string startJson = "{\"type\":\"document-start\",\"documentId\":\"doc-123\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
+        const string startJson = "{\"type\":\"document-start\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
         _manager.HandleMessage(startJson);
 
         DocumentCloseMessage observed = null;
@@ -139,10 +136,8 @@ public class DocumentManagerTests
         _manager.HandleMessage(closeJson);
 
         Assert.NotNull(observed);
-        Assert.AreEqual("doc-123", observed.documentId);
 
         Assert.IsFalse(_manager.IsDocumentOpen);
-        Assert.IsNull(_manager.CurrentDocumentId);
         Assert.IsNull(_manager.CurrentDocumentName);
         Assert.AreEqual(0, _manager.TotalPages);
         Assert.AreEqual(-1, _manager.CurrentPageIndex);

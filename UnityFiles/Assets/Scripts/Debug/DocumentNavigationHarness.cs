@@ -38,7 +38,7 @@ public class DocumentNavigationHarness : MonoBehaviour
         if (navigationController != null && navigationChannel != null)
             navigationController.Configure(documentManager, navigationChannel);
 
-        var json = $"{{\"type\":\"document-start\",\"documentId\":\"{documentId}\",\"documentName\":\"{documentName}\",\"totalPages\":{Mathf.Max(0, totalPages)}}}";
+        var json = $"{{\"type\":\"document-start\",\"documentName\":\"{documentId}\",\"documentName\":\"{documentName}\",\"totalPages\":{Mathf.Max(0, totalPages)}}}";
         documentManager.HandleMessage(json);
         Debug.Log($"DocumentNavigationHarness: setup session for document '{documentId}' totalPages={Mathf.Max(0, totalPages)}.");
     }
@@ -81,7 +81,7 @@ public class DocumentNavigationHarness : MonoBehaviour
             return;
 
         var pageIndex = Mathf.Max(1, inboundNavigatePageOneBased) - 1;
-        var json = $"{{\"type\":\"document-navigate\",\"documentId\":\"{documentId}\",\"pageIndex\":{pageIndex},\"source\":\"harness-remote\"}}";
+        var json = $"{{\"type\":\"document-navigate\",\"documentName\":\"{documentId}\",\"pageIndex\":{pageIndex},\"source\":\"harness-remote\"}}";
         navigationChannel.TryHandleInboundMessage(json);
         Debug.Log($"DocumentNavigationHarness: simulated inbound navigate to {inboundNavigatePageOneBased}. currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
@@ -120,7 +120,7 @@ public class DocumentNavigationHarness : MonoBehaviour
         var root = JObject.Parse(json);
         var type = (string)root["type"];
         var pageIndex = (int?)root["pageIndex"];
-        var documentId = (string)root["documentId"];
+        var documentId = (string)root["documentName"];
         Debug.Log($"DocumentNavigationHarness: outbound '{type}' doc={documentId}, pageIndex={pageIndex}");
     }
 }
