@@ -15,6 +15,7 @@ public class DocumentManager : MonoBehaviour
     public event Action<DocumentPageMessage> OnDocumentPage;
     public event Action<DocumentCloseMessage> OnDocumentClose;
     public event Action<string> OnRawJsonMessageReceived;
+    public event Action<int, int> OnPageIndexChanged; // Current, Total
 
     public bool IsDocumentOpen => _sessionState.IsDocumentOpen;
     public string CurrentDocumentId => _sessionState.CurrentDocumentId;
@@ -102,7 +103,15 @@ public class DocumentManager : MonoBehaviour
             return false;
 
         clampedPageIndex = Mathf.Clamp(targetPageIndex, 0, _sessionState.TotalPages - 1);
+        
+        bool changed = _sessionState.CurrentPageIndex != clampedPageIndex;
         _sessionState.CurrentPageIndex = clampedPageIndex;
+
+        if (changed)
+        {
+            OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
+        }
+
         return true;
     }
 
@@ -121,8 +130,9 @@ public class DocumentManager : MonoBehaviour
         _sessionState.CurrentPageIndex = _sessionState.TotalPages > 0 ? 0 : -1;
 
         ClearAssembliesForCurrentDocument();
+        OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
         OnDocumentStart?.Invoke(message);
-    }
+        }
 
     private void HandleDocumentPage(DocumentPageMessage message)
     {
@@ -201,6 +211,7 @@ public class DocumentManager : MonoBehaviour
         _pageAssemblies.Remove(assemblyKey);
 
         _sessionState.CurrentPageIndex = assembly.PageIndex;
+        OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
 
         if (pdfPageDisplay != null)
             pdfPageDisplay.ShowFromBytes(assembledBytes, assembly.Width, assembly.Height);
