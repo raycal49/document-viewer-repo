@@ -24,9 +24,9 @@ public class DocumentChunkFlowHarness : MonoBehaviour
     {
         if (!CanSend()) return;
 
-        var json = $"{{\"type\":\"document-start\",\"documentName\":\"{documentId}\",\"documentName\":\"{documentName}\",\"totalPages\":{Mathf.Max(0, totalPages)}}}";
+        var json = $"{{\"type\":\"document-start\",\"documentName\":\"{documentName}\",\"totalPages\":{Mathf.Max(0, totalPages)}}}";
         documentManager.HandleMessage(json);
-        Debug.Log($"DocumentChunkFlowHarness: sent document-start id={documentId}, totalPages={totalPages}");
+        Debug.Log($"DocumentChunkFlowHarness: sent document-start name={documentName}, totalPages={totalPages}");
     }
 
     [ContextMenu("Send Chunked Page (In Order)")]
@@ -69,9 +69,9 @@ public class DocumentChunkFlowHarness : MonoBehaviour
     {
         if (!CanSend()) return;
 
-        var json = $"{{\"type\":\"document-close\",\"documentName\":\"{documentId}\"}}";
+        var json = $"{{\"type\":\"document-close\",\"documentName\":\"{documentName}\"}}";
         documentManager.HandleMessage(json);
-        Debug.Log($"DocumentChunkFlowHarness: sent document-close id={documentId}");
+        Debug.Log($"DocumentChunkFlowHarness: sent document-close name={documentName}");
     }
 
     [ContextMenu("Run Full Happy Path")]
@@ -111,7 +111,7 @@ public class DocumentChunkFlowHarness : MonoBehaviour
     {
         var payload = Convert.ToBase64String(chunkBytes);
         var json =
-            $"{{\"type\":\"document-page\",\"documentName\":\"{documentId}\",\"pageIndex\":{pageIndex},\"totalPages\":{Mathf.Max(0, totalPages)},\"width\":{Mathf.Max(1, width)},\"height\":{Mathf.Max(1, height)},\"chunkIndex\":{chunkIndex},\"totalChunks\":{totalChunks},\"data\":\"{payload}\"}}";
+            $"{{\"type\":\"document-page\",\"pageIndex\":{pageIndex},\"totalPages\":{Mathf.Max(0, totalPages)},\"width\":{Mathf.Max(1, width)},\"height\":{Mathf.Max(1, height)},\"chunkIndex\":{chunkIndex},\"totalChunks\":{totalChunks},\"data\":\"{payload}\"}}";
 
         documentManager.HandleMessage(json);
         Debug.Log($"DocumentChunkFlowHarness: sent chunk {chunkIndex + 1}/{totalChunks} for page={pageIndex}, bytes={chunkBytes.Length}");

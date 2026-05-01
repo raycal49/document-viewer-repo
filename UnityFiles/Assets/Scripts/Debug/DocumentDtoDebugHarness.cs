@@ -4,10 +4,10 @@ public class DocumentDtoDebugHarness : MonoBehaviour
 {
     [Header("Sample JSON payloads")]
     [TextArea(2, 5)]
-    [SerializeField] private string _startJson = "{\"documentId\":\"manual-001\",\"documentName\":\"Pump Manual\",\"totalPages\":42}";
+    [SerializeField] private string _startJson = "{\"documentName\":\"Pump Manual\",\"totalPages\":42}";
 
     [TextArea(2, 8)]
-    [SerializeField] private string _pageJson = "{\"documentId\":\"manual-001\",\"pageIndex\":2,\"totalPages\":42,\"width\":1200,\"height\":1600,\"chunkIndex\":0,\"totalChunks\":3,\"data\":\"AQID\"}";
+    [SerializeField] private string _pageJson = "\"pageIndex\":2,\"totalPages\":42,\"width\":1200,\"height\":1600,\"chunkIndex\":0,\"totalChunks\":3,\"data\":\"AQID\"}";
 
     [TextArea(2, 4)]
     [SerializeField] private string _closeJson = "{\"documentName\":\"manual-001\"}";
@@ -50,13 +50,5 @@ public class DocumentDtoDebugHarness : MonoBehaviour
         }
 
         Debug.Log($"DocumentCloseMessage OK: id={message.documentName}");
-    }
-
-    [ContextMenu("Parse All Messages")]
-    public void ParseAllMessages()
-    {
-        ParseStartMessage();
-        ParsePageMessage();
-        ParseCloseMessage();
     }
 }

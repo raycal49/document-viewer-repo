@@ -43,7 +43,6 @@ using UnityEngine;
 
 [Serializable] public class DocumentNavigateMessage
 {
-    public string documentId;
     public int pageIndex;
     public string source;
 }
