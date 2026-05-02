@@ -169,11 +169,8 @@ public class DocumentNavigationController : MonoBehaviour
         jumpPanel.transform.localPosition = new Vector3(0, 0, -0.055f);
         jumpPanel.transform.localRotation = Quaternion.identity;
 
-        // 3. Activation and Focus
+        // 3. Activation
         jumpPanel.SetActive(true);
-        jumpInputField.text = string.Empty;
-        jumpInputField.Select();
-        jumpInputField.ActivateInputField();
     }
 
     public void OnJumpConfirmClicked()
