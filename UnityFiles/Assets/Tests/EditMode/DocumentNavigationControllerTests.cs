@@ -35,7 +35,7 @@ public class DocumentNavigationControllerTests
         string outboundJson = null;
         _navigationChannel.OnOutboundMessageSerialized += json => outboundJson = json;
 
-        var moved = _navigationController.NavigateNext("quest-next-button");
+        var moved = _navigationController.NavigateNext();
 
         Assert.IsTrue(moved);
         Assert.AreEqual(1, _documentManager.CurrentPageIndex);

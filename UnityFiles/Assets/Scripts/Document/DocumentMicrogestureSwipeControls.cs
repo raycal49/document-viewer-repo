@@ -22,9 +22,7 @@ public class DocumentMicrogestureSwipeControls : MonoBehaviour
     [Tooltip("Gesture value that should trigger next page. Select in Inspector for your SDK version.")]
     [SerializeField] private OVRHand.MicrogestureType nextPageGesture = (OVRHand.MicrogestureType)1;
 
-    [Header("Sources + debounce")]
-    [SerializeField] private string previousGestureSource = "microgesture-prev";
-    [SerializeField] private string nextGestureSource = "microgesture-next";
+    [Header("debounce")]
     [SerializeField] private float cooldownSeconds = 0.35f;
 
     [Header("Diagnostics")]
@@ -80,11 +78,11 @@ public class DocumentMicrogestureSwipeControls : MonoBehaviour
 
         if (gesture.Equals(previousPageGesture))
         {
-            accepted = navigationController.NavigatePrevious(previousGestureSource);
+            accepted = navigationController.NavigatePrevious();
         }
         else if (gesture.Equals(nextPageGesture))
         {
-            accepted = navigationController.NavigateNext(nextGestureSource);
+            accepted = navigationController.NavigateNext();
         }
         else if (logIgnoredGestures)
         {

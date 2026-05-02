@@ -50,12 +50,10 @@ public class DocumentMessageDtoTests
         var navigate = new DocumentNavigateMessage
         {
             pageIndex = 8,
-            source = "quest"
         };
 
         var navigateJson = JsonUtility.ToJson(navigate);
 
         StringAssert.Contains("\"pageIndex\":8", navigateJson);
-        StringAssert.Contains("\"source\":\"quest\"", navigateJson);
     }
 }

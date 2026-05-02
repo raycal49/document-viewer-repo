@@ -59,7 +59,7 @@ public class DocumentNavigationControls : MonoBehaviour
         }
 
         Debug.Log("Prev button clicked", this);
-        navigationController.NavigatePrevious(prevSource);
+        navigationController.NavigatePrevious();
     }
 
     public void OnNextPressed()
@@ -71,7 +71,7 @@ public class DocumentNavigationControls : MonoBehaviour
         }
 
         Debug.Log("Next button clicked", this);
-        navigationController.NavigateNext(nextSource);
+        navigationController.NavigateNext();
     }
 
     public void OnJumpSubmitted(string pageText)
@@ -89,7 +89,7 @@ public class DocumentNavigationControls : MonoBehaviour
         }
 
         var zeroBasedPage = oneBasedPage - 1;
-        navigationController.NavigateToPage(zeroBasedPage, jumpSource);
+        navigationController.NavigateToPage(zeroBasedPage);
     }
 
     private void NavigateNextFromController()
@@ -100,7 +100,7 @@ public class DocumentNavigationControls : MonoBehaviour
             return;
         }
 
-        navigationController.NavigateNext(aButtonSource);
+        navigationController.NavigateNext();
     }
 
     private void NavigatePrevFromController()
@@ -111,6 +111,6 @@ public class DocumentNavigationControls : MonoBehaviour
             return;
         }
 
-        navigationController.NavigatePrevious(bButtonSource);
+        navigationController.NavigatePrevious();
     }
 }

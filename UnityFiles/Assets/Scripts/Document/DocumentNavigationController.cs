@@ -6,7 +6,6 @@ public class DocumentNavigationController : MonoBehaviour
     [SerializeField] private DocumentManager documentManager;
     [SerializeField] private DocumentNavigationChannel navigationChannel;
 
-    public event Action<DocumentNavigateMessage> OnNavigateIntent;
     public event Action<DocumentNavigateMessage> OnNavigateApplied;
 
     public void Configure(DocumentManager manager, DocumentNavigationChannel channel)
@@ -27,23 +26,23 @@ public class DocumentNavigationController : MonoBehaviour
         DetachFromChannel();
     }
 
-    public bool NavigatePrevious(string source = "quest-prev")
+    public bool NavigatePrevious()
     {
         if (documentManager == null)
             return false;
 
-        return NavigateToPage(documentManager.CurrentPageIndex - 1, source);
+        return NavigateToPage(documentManager.CurrentPageIndex - 1);
     }
 
-    public bool NavigateNext(string source = "quest-next")
+    public bool NavigateNext()
     {
         if (documentManager == null)
             return false;
 
-        return NavigateToPage(documentManager.CurrentPageIndex + 1, source);
+        return NavigateToPage(documentManager.CurrentPageIndex + 1);
     }
 
-    public bool NavigateToPage(int targetPageIndex, string source = "quest-jump")
+    public bool NavigateToPage(int targetPageIndex)
     {
         if (!CanNavigate())
             return false;
@@ -54,7 +53,6 @@ public class DocumentNavigationController : MonoBehaviour
         var message = new DocumentNavigateMessage
         {
             pageIndex = clampedPageIndex,
-            source = source
         };
 
         OnNavigateApplied?.Invoke(message);

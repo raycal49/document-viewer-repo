@@ -44,5 +44,4 @@ using UnityEngine;
 [Serializable] public class DocumentNavigateMessage
 {
     public int pageIndex;
-    public string source;
 }

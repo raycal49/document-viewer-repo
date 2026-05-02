@@ -69,13 +69,13 @@ public class DocumentUIController : MonoBehaviour
     public void OnPrevClicked()
     {
         if (navigationController != null)
-            navigationController.NavigatePrevious("ui-prev-button");
+            navigationController.NavigatePrevious();
     }
 
     public void OnNextClicked()
     {
         if (navigationController != null)
-            navigationController.NavigateNext("ui-next-button");
+            navigationController.NavigateNext();
     }
 
     private void UpdateUI()

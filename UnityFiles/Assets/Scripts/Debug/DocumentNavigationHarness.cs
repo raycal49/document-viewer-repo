@@ -49,7 +49,7 @@ public class DocumentNavigationHarness : MonoBehaviour
         if (!HasManagerAndController())
             return;
 
-        var sent = navigationController.NavigatePrevious("harness-prev");
+        var sent = navigationController.NavigatePrevious();
         Debug.Log($"DocumentNavigationHarness: prev pressed. sent={sent}, currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
 
@@ -59,7 +59,7 @@ public class DocumentNavigationHarness : MonoBehaviour
         if (!HasManagerAndController())
             return;
 
-        var sent = navigationController.NavigateNext("harness-next");
+        var sent = navigationController.NavigateNext();
         Debug.Log($"DocumentNavigationHarness: next pressed. sent={sent}, currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
 
@@ -70,7 +70,7 @@ public class DocumentNavigationHarness : MonoBehaviour
             return;
 
         var targetPageIndex = Mathf.Max(1, jumpToPageOneBased) - 1;
-        var sent = navigationController.NavigateToPage(targetPageIndex, "harness-jump");
+        var sent = navigationController.NavigateToPage(targetPageIndex);
         Debug.Log($"DocumentNavigationHarness: jump pressed target={jumpToPageOneBased}, sent={sent}, currentPage={documentManager.CurrentPageIndex + 1}/{documentManager.TotalPages}");
     }
 
