@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Text;
 using Unity.WebRTC;
 using UnityEngine;
-using static Codice.CM.WorkspaceServer.DataStore.WkTree.WriteWorkspaceTree;
 
 public class DocumentManager : MonoBehaviour
 {

@@ -154,6 +154,24 @@ public class DocumentNavigationController : MonoBehaviour
             return;
         }
 
+        // 1. Programmatic Character Limit
+        if (documentManager != null && documentManager.TotalPages > 0)
+        {
+            jumpInputField.characterLimit = documentManager.TotalPages.ToString().Length;
+        }
+
+        // 2. Programmatic Positioning
+        GameObject menuRoot = GameObject.Find("PDFMenuRoot");
+        if (menuRoot != null)
+        {
+            jumpPanel.transform.position = menuRoot.transform.position;
+            jumpPanel.transform.rotation = menuRoot.transform.rotation;
+            
+            // Push it slightly toward the user (local negative Z)
+            jumpPanel.transform.Translate(0, 0, -0.05f, Space.Self);
+        }
+
+        // 3. Activation and Focus
         jumpPanel.SetActive(true);
         jumpInputField.text = string.Empty;
         jumpInputField.Select();
