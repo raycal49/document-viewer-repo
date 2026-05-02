@@ -28,6 +28,11 @@ public class DocumentNavigationController : MonoBehaviour
     private void Start()
     {
         documentManager.OnDocumentStart += RefreshPageCountJumpLabel;
+        
+        if (jumpInputField != null)
+        {
+            jumpInputField.onSubmit.AddListener(_ => OnJumpConfirmClicked());
+        }
     }
 
     private void OnEnable()
@@ -160,16 +165,9 @@ public class DocumentNavigationController : MonoBehaviour
             jumpInputField.characterLimit = documentManager.TotalPages.ToString().Length;
         }
 
-        // 2. Programmatic Positioning
-        GameObject menuRoot = GameObject.Find("PDFMenuRoot");
-        if (menuRoot != null)
-        {
-            jumpPanel.transform.position = menuRoot.transform.position;
-            jumpPanel.transform.rotation = menuRoot.transform.rotation;
-            
-            // Push it slightly toward the user (local negative Z)
-            jumpPanel.transform.Translate(0, 0, -0.05f, Space.Self);
-        }
+        // 2. Local Positioning (Assumes JumpPanel is child of PDFMenuRoot)
+        jumpPanel.transform.localPosition = new Vector3(0, 0, -0.055f);
+        jumpPanel.transform.localRotation = Quaternion.identity;
 
         // 3. Activation and Focus
         jumpPanel.SetActive(true);
