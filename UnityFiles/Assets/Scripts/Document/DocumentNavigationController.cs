@@ -1,11 +1,16 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class DocumentNavigationController : MonoBehaviour
 {
     [SerializeField] private DocumentManager documentManager;
     [SerializeField] private DocumentNavigationChannel navigationChannel;
+
+    [Header("Jump-to-page UI")]
+    [SerializeField] private GameObject jumpPanel;
+    [SerializeField] private TMP_InputField jumpInputField;
 
     public event Action<DocumentNavigateMessage> OnNavigateApplied;
 
@@ -139,5 +144,54 @@ public class DocumentNavigationController : MonoBehaviour
             return;
 
         navigationChannel.OnNavigateReceived -= HandleInboundNavigate;
+    }
+
+    public void OnPageCountJumpClicked()
+    {
+        if (jumpPanel == null || jumpInputField == null)
+        {
+            Debug.LogWarning("DocumentNavigationControls: jump panel/input not assigned.");
+            return;
+        }
+
+        jumpPanel.SetActive(true);
+        jumpInputField.text = string.Empty;
+        jumpInputField.Select();
+        jumpInputField.ActivateInputField();
+    }
+
+    public void OnJumpConfirmClicked()
+    {
+        if (jumpInputField == null)
+        {
+            Debug.LogWarning("DocumentNavigationControls: jump input field is not assigned.");
+            return;
+        }
+
+        var raw = jumpInputField.text?.Trim();
+        if (!int.TryParse(raw, out var oneBasedPage))
+        {
+            Debug.LogWarning($"DocumentNavigationControls: invalid jump input '{raw}'.");
+            return; // keep panel open so user can fix
+        }
+
+        // convert user-facing 1-based page number to 0-based index
+        int zeroBasedPage = oneBasedPage - 1;
+
+        bool moved = NavigateToPage(zeroBasedPage);
+        if (!moved)
+        {
+            Debug.LogWarning($"DocumentNavigationControls: jump target out of range or navigation unavailable ({oneBasedPage}).");
+            return; // keep open
+        }
+
+        jumpPanel.SetActive(false);
+    }
+
+
+    public void OnJumpCancelClicked()
+    {
+        if (jumpPanel != null)
+            jumpPanel.SetActive(false);
     }
 }
