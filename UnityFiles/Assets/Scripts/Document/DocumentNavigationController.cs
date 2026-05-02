@@ -31,6 +31,7 @@ public class DocumentNavigationController : MonoBehaviour
         if (documentManager == null)
             return false;
 
+        // this needs to call `SendNavigate` in order to truly, truly send. same with NavigateNext()
         return NavigateToPage(documentManager.CurrentPageIndex - 1);
     }
 
