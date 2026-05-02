@@ -1,14 +1,21 @@
 using System;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class DocumentNavigationController : MonoBehaviour
 {
     [SerializeField] private DocumentManager documentManager;
     [SerializeField] private DocumentNavigationChannel navigationChannel;
 
-    public event Action<DocumentNavigateMessage> OnNavigateIntent;
-    public event Action<DocumentRequestPageMessage> OnRequestPageIntent;
+    [Header("Jump-to-page UI")]
+    [SerializeField] private GameObject jumpPanel;
+    [SerializeField] private TMP_InputField jumpInputField;
+
     public event Action<DocumentNavigateMessage> OnNavigateApplied;
+
+    [Header("PageCountJump")]
+    [SerializeField] private TextMeshProUGUI pageCountJumpLabel;
 
     public void Configure(DocumentManager manager, DocumentNavigationChannel channel)
     {
@@ -16,6 +23,16 @@ public class DocumentNavigationController : MonoBehaviour
         documentManager = manager;
         navigationChannel = channel;
         AttachToChannel();
+    }
+
+    private void Start()
+    {
+        documentManager.OnDocumentStart += RefreshPageCountJumpLabel;
+        
+        if (jumpInputField != null)
+        {
+            jumpInputField.onSubmit.AddListener(_ => OnJumpConfirmClicked());
+        }
     }
 
     private void OnEnable()
@@ -28,23 +45,27 @@ public class DocumentNavigationController : MonoBehaviour
         DetachFromChannel();
     }
 
-    public bool NavigatePrevious(string source = "quest-prev")
+    // actually, due to the nature of how this works, really, its just `NavigateToPage` that must call `SendNavigate`! 
+    // this is because, well, everything else just calls `NavigateToPage`!
+    public bool NavigatePrevious()
     {
         if (documentManager == null)
             return false;
 
-        return NavigateToPage(documentManager.CurrentPageIndex - 1, source);
+        // this needs to call `SendNavigate`
+        return NavigateToPage(documentManager.CurrentPageIndex - 1);
     }
 
-    public bool NavigateNext(string source = "quest-next")
+    public bool NavigateNext()
     {
         if (documentManager == null)
             return false;
 
-        return NavigateToPage(documentManager.CurrentPageIndex + 1, source);
+        return NavigateToPage(documentManager.CurrentPageIndex + 1);
     }
 
-    public bool NavigateToPage(int targetPageIndex, string source = "quest-jump")
+    // Now THIS
+    public bool NavigateToPage(int targetPageIndex)
     {
         if (!CanNavigate())
             return false;
@@ -52,55 +73,48 @@ public class DocumentNavigationController : MonoBehaviour
         if (!documentManager.TrySetCurrentPageIndex(targetPageIndex, out var clampedPageIndex))
             return false;
 
+        int previousPageIndex = documentManager.CurrentPageIndex-1;
+
+        int delta = clampedPageIndex - previousPageIndex;
+        if (delta != 0)
+        {
+            RefreshPageCountJumpLabel();
+        }
+
         var message = new DocumentNavigateMessage
         {
-            documentId = documentManager.CurrentDocumentId,
             pageIndex = clampedPageIndex,
-            source = source
         };
 
-        OnNavigateIntent?.Invoke(message);
         OnNavigateApplied?.Invoke(message);
         return true;
     }
 
-    public bool RequestPage(int pageIndex)
+    private void RefreshPageCountJumpLabel()
     {
-        if (!CanNavigate())
-            return false;
+        if (pageCountJumpLabel == null || documentManager == null)
+            return;
 
-        if (!documentManager.TrySetCurrentPageIndex(pageIndex, out var clampedPageIndex))
-            return false;
+        int totalPages = documentManager.TotalPages;
 
-        var message = new DocumentRequestPageMessage
+        if (totalPages <= 0)
         {
-            documentId = documentManager.CurrentDocumentId,
-            pageIndex = clampedPageIndex
-        };
+            pageCountJumpLabel.text = "- / -";
+            return;
+        }
 
-        OnRequestPageIntent?.Invoke(message);
-        return true;
+        // Convert 0-based index to 1-based page number for display.
+        int currentDisplayPage = Mathf.Clamp(documentManager.CurrentPageIndex + 1, 1, totalPages);
+        pageCountJumpLabel.text = $"{currentDisplayPage} / {totalPages}";
     }
 
     private void HandleInboundNavigate(DocumentNavigateMessage message)
     {
-        if (!IsValidForCurrentDocument(message?.documentId))
-            return;
-
         if (!documentManager.TrySetCurrentPageIndex(message.pageIndex, out var clampedPageIndex))
             return;
 
         message.pageIndex = clampedPageIndex;
         OnNavigateApplied?.Invoke(message);
-    }
-
-    private void HandleInboundRequestPage(DocumentRequestPageMessage message)
-    {
-        if (!IsValidForCurrentDocument(message?.documentId))
-            return;
-
-        if (!documentManager.TrySetCurrentPageIndex(message.pageIndex, out _))
-            return;
     }
 
     private bool CanNavigate()
@@ -111,29 +125,10 @@ public class DocumentNavigationController : MonoBehaviour
             return false;
         }
 
-        if (!documentManager.IsDocumentOpen || string.IsNullOrWhiteSpace(documentManager.CurrentDocumentId))
-        {
-            Debug.LogWarning("DocumentNavigationController: no active document to navigate.");
-            return false;
-        }
 
         if (documentManager.TotalPages <= 0)
         {
             Debug.LogWarning("DocumentNavigationController: active document has no pages.");
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool IsValidForCurrentDocument(string documentId)
-    {
-        if (!CanNavigate())
-            return false;
-
-        if (!string.Equals(documentId, documentManager.CurrentDocumentId, StringComparison.Ordinal))
-        {
-            Debug.LogWarning($"DocumentNavigationController: ignoring navigation for non-active document '{documentId}'. Active='{documentManager.CurrentDocumentId}'.");
             return false;
         }
 
@@ -146,9 +141,6 @@ public class DocumentNavigationController : MonoBehaviour
             return;
 
         navigationChannel.OnNavigateReceived += HandleInboundNavigate;
-        navigationChannel.OnRequestPageReceived += HandleInboundRequestPage;
-        OnNavigateIntent += ForwardNavigateIntent;
-        OnRequestPageIntent += ForwardRequestPageIntent;
     }
 
     private void DetachFromChannel()
@@ -157,18 +149,62 @@ public class DocumentNavigationController : MonoBehaviour
             return;
 
         navigationChannel.OnNavigateReceived -= HandleInboundNavigate;
-        navigationChannel.OnRequestPageReceived -= HandleInboundRequestPage;
-        OnNavigateIntent -= ForwardNavigateIntent;
-        OnRequestPageIntent -= ForwardRequestPageIntent;
     }
 
-    private void ForwardNavigateIntent(DocumentNavigateMessage message)
+    public void OnPageCountJumpClicked()
     {
-        navigationChannel?.SendNavigate(message);
+        if (jumpPanel == null || jumpInputField == null)
+        {
+            Debug.LogWarning("DocumentNavigationControls: jump panel/input not assigned.");
+            return;
+        }
+
+        // 1. Programmatic Character Limit
+        if (documentManager != null && documentManager.TotalPages > 0)
+        {
+            jumpInputField.characterLimit = documentManager.TotalPages.ToString().Length;
+        }
+
+        // 2. Local Positioning (Assumes JumpPanel is child of PDFMenuRoot)
+        jumpPanel.transform.localPosition = new Vector3(0, 0, -0.055f);
+        jumpPanel.transform.localRotation = Quaternion.identity;
+
+        // 3. Activation
+        jumpPanel.SetActive(true);
     }
 
-    private void ForwardRequestPageIntent(DocumentRequestPageMessage message)
+    public void OnJumpConfirmClicked()
     {
-        navigationChannel?.SendRequestPage(message);
+        if (jumpInputField == null)
+        {
+            Debug.LogWarning("DocumentNavigationControls: jump input field is not assigned.");
+            return;
+        }
+
+        var raw = jumpInputField.text?.Trim();
+        if (!int.TryParse(raw, out var oneBasedPage))
+        {
+            Debug.LogWarning($"DocumentNavigationControls: invalid jump input '{raw}'.");
+            return; // keep panel open so user can fix
+        }
+
+        // convert user-facing 1-based page number to 0-based index
+        int zeroBasedPage = oneBasedPage - 1;
+
+        bool moved = NavigateToPage(zeroBasedPage);
+        if (!moved)
+        {
+            Debug.LogWarning($"DocumentNavigationControls: jump target out of range or navigation unavailable ({oneBasedPage}).");
+            return; // keep open
+        }
+
+        jumpPanel.SetActive(false);
+    }
+
+
+    public void OnJumpCancelClicked()
+    {
+        if (jumpPanel != null)
+            jumpPanel.SetActive(false);
     }
 }

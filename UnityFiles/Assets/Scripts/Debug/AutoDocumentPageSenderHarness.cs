@@ -21,7 +21,6 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
     [SerializeField] private DocumentNavigationChannel navigationChannel;
 
     [Header("Document metadata")]
-    [SerializeField] private string documentId = "exec_summary";
     [SerializeField] private string documentName = "Exec Summary";
 
     [Header("Page source")]
@@ -118,7 +117,6 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         var root = new JObject
         {
             ["type"] = "document-close",
-            ["documentId"] = documentId
         };
 
         var json = root.ToString(Formatting.None);
@@ -127,7 +125,7 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         _sessionStarted = false;
 
         if (verboseLogs)
-            Debug.Log($"AutoDocumentPageSenderHarness: sent document-close for '{documentId}'.");
+            Debug.Log($"AutoDocumentPageSenderHarness: sent document-close for '{documentName}'.");
     }
 
     public void SendPageByOneBasedNumber(int oneBasedPage)
@@ -165,7 +163,6 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
             var pageRoot = new JObject
             {
                 ["type"] = "document-page",
-                ["documentId"] = documentId,
                 ["pageIndex"] = clamped,
                 ["totalPages"] = _resolvedPages.Count,
                 ["width"] = 0,
@@ -190,9 +187,6 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         {
             if (listenToNavigateApplied)
                 navigationController.OnNavigateApplied += HandleNavigateApplied;
-
-            if (listenToRequestPageIntent)
-                navigationController.OnRequestPageIntent += HandleRequestPageIntent;
         }
 
         if (documentManager != null)
@@ -210,7 +204,6 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         if (navigationController != null)
         {
             navigationController.OnNavigateApplied -= HandleNavigateApplied;
-            navigationController.OnRequestPageIntent -= HandleRequestPageIntent;
         }
 
         if (documentManager != null)
@@ -225,15 +218,7 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
 
     private void HandleNavigateApplied(DocumentNavigateMessage message)
     {
-        if (message == null || !IsForThisDocument(message.documentId))
-            return;
-
-        SendPageByZeroBasedIndex(message.pageIndex);
-    }
-
-    private void HandleRequestPageIntent(DocumentRequestPageMessage message)
-    {
-        if (message == null || !IsForThisDocument(message.documentId))
+        if (message == null)
             return;
 
         SendPageByZeroBasedIndex(message.pageIndex);
@@ -254,17 +239,11 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         EmitSentJson("navigation-channel", json);
     }
 
-    private bool IsForThisDocument(string incomingDocumentId)
-    {
-        return string.Equals(incomingDocumentId, documentId, StringComparison.Ordinal);
-    }
-
     private void SendDocumentStart(int totalPages)
     {
         var root = new JObject
         {
             ["type"] = "document-start",
-            ["documentId"] = documentId,
             ["documentName"] = documentName,
             ["totalPages"] = Mathf.Max(0, totalPages)
         };
@@ -274,7 +253,7 @@ public class AutoDocumentPageSenderHarness : MonoBehaviour
         documentManager.HandleMessage(json);
 
         if (verboseLogs)
-            Debug.Log($"AutoDocumentPageSenderHarness: sent document-start id={documentId}, totalPages={totalPages}.");
+            Debug.Log($"AutoDocumentPageSenderHarness: sent document-start totalPages={totalPages}.");
     }
 
     private List<TextAsset> BuildResolvedPages()

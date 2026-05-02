@@ -7,7 +7,6 @@ using UnityEngine;
 public class DocumentNavigationChannel : MonoBehaviour
 {
     public event Action<DocumentNavigateMessage> OnNavigateReceived;
-    public event Action<DocumentRequestPageMessage> OnRequestPageReceived;
     public event Action<string> OnInboundMessageSerialized;
     public event Action<string> OnOutboundMessageSerialized;
 
@@ -18,6 +17,7 @@ public class DocumentNavigationChannel : MonoBehaviour
         _dataChannel = dataChannel;
     }
 
+    // this does not need to be in the final version so to speak
     public bool TryHandleInboundMessage(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -45,10 +45,6 @@ public class DocumentNavigationChannel : MonoBehaviour
                 OnNavigateReceived?.Invoke(root.ToObject<DocumentNavigateMessage>());
                 return true;
 
-            case "document-request-page":
-                OnRequestPageReceived?.Invoke(root.ToObject<DocumentRequestPageMessage>());
-                return true;
-
             default:
                 return false;
         }
@@ -57,11 +53,6 @@ public class DocumentNavigationChannel : MonoBehaviour
     public bool SendNavigate(DocumentNavigateMessage message)
     {
         return SendMessage("document-navigate", message);
-    }
-
-    public bool SendRequestPage(DocumentRequestPageMessage message)
-    {
-        return SendMessage("document-request-page", message);
     }
 
     private bool SendMessage(string type, object payload)
@@ -81,4 +72,21 @@ public class DocumentNavigationChannel : MonoBehaviour
         _dataChannel.Send(Encoding.UTF8.GetBytes(json));
         return true;
     }
+
+    //public bool NavigatePrevious()
+    //{
+    //    if (documentManager == null)
+    //        return false;
+
+    //    // this needs to call `SendNavigate` in order to truly, truly send. same with NavigateNext()
+    //    return NavigateToPage(documentManager.CurrentPageIndex - 1);
+    //}
+
+    //public bool NavigateNext()
+    //{
+    //    if (documentManager == null)
+    //        return false;
+
+    //    return NavigateToPage(documentManager.CurrentPageIndex + 1);
+    //}
 }

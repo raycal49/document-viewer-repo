@@ -1,8 +1,8 @@
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json.Linq;
 using Unity.WebRTC;
 using UnityEngine;
 
@@ -11,13 +11,14 @@ public class DocumentManager : MonoBehaviour
     [SerializeField] private PdfPageDisplay pdfPageDisplay;
     [SerializeField] private float chunkAssemblyTimeoutSeconds = 15f;
 
-    public event Action<DocumentStartMessage> OnDocumentStart;
+    public event Action OnDocumentStart;
     public event Action<DocumentPageMessage> OnDocumentPage;
     public event Action<DocumentCloseMessage> OnDocumentClose;
     public event Action<string> OnRawJsonMessageReceived;
+    public event Action<int, int> OnPageIndexChanged; // Current, Total
 
     public bool IsDocumentOpen => _sessionState.IsDocumentOpen;
-    public string CurrentDocumentId => _sessionState.CurrentDocumentId;
+
     public string CurrentDocumentName => _sessionState.CurrentDocumentName;
     public int TotalPages => _sessionState.TotalPages;
     public int CurrentPageIndex => _sessionState.CurrentPageIndex;
@@ -95,74 +96,45 @@ public class DocumentManager : MonoBehaviour
     {
         clampedPageIndex = -1;
 
-        if (!_sessionState.IsDocumentOpen || string.IsNullOrWhiteSpace(_sessionState.CurrentDocumentId))
-            return false;
 
         if (_sessionState.TotalPages <= 0)
             return false;
 
         clampedPageIndex = Mathf.Clamp(targetPageIndex, 0, _sessionState.TotalPages - 1);
+        
+        bool changed = _sessionState.CurrentPageIndex != clampedPageIndex;
         _sessionState.CurrentPageIndex = clampedPageIndex;
+
+        if (changed)
+        {
+            OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
+        }
+
         return true;
     }
 
     private void HandleDocumentStart(DocumentStartMessage message)
     {
-        if (message == null || string.IsNullOrWhiteSpace(message.documentId))
+        if (message == null)
         {
             Debug.LogWarning("DocumentManager: ignoring invalid document-start payload.");
             return;
         }
 
         _sessionState.IsDocumentOpen = true;
-        _sessionState.CurrentDocumentId = message.documentId;
         _sessionState.CurrentDocumentName = message.documentName;
         _sessionState.TotalPages = Mathf.Max(0, message.totalPages);
         _sessionState.CurrentPageIndex = _sessionState.TotalPages > 0 ? 0 : -1;
 
         ClearAssembliesForCurrentDocument();
-        OnDocumentStart?.Invoke(message);
+        OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
+        OnDocumentStart?.Invoke();
     }
 
     private void HandleDocumentPage(DocumentPageMessage message)
     {
-        if (message == null)
-        {
-            Debug.LogWarning("DocumentManager: ignoring null document-page payload.");
-            return;
-        }
+        var assemblyKey = $"{message.pageIndex}";
 
-        if (!_sessionState.IsDocumentOpen)
-        {
-            Debug.LogWarning("DocumentManager: ignoring document-page because no document is open.");
-            return;
-        }
-
-        if (!string.Equals(message.documentId, _sessionState.CurrentDocumentId, StringComparison.Ordinal))
-        {
-            Debug.LogWarning($"DocumentManager: ignoring document-page for non-active document '{message.documentId}'. Active='{_sessionState.CurrentDocumentId}'.");
-            return;
-        }
-
-        if (message.pageIndex < 0 || (_sessionState.TotalPages > 0 && message.pageIndex >= _sessionState.TotalPages))
-        {
-            Debug.LogWarning($"DocumentManager: ignoring out-of-range page index {message.pageIndex} for totalPages={_sessionState.TotalPages}.");
-            return;
-        }
-
-        if (message.totalChunks <= 0 || message.chunkIndex < 0 || message.chunkIndex >= message.totalChunks)
-        {
-            Debug.LogWarning($"DocumentManager: ignoring invalid chunk metadata chunkIndex={message.chunkIndex}, totalChunks={message.totalChunks}.");
-            return;
-        }
-
-        if (message.data == null || message.data.Length == 0)
-        {
-            Debug.LogWarning("DocumentManager: ignoring document-page with empty chunk payload.");
-            return;
-        }
-
-        var assemblyKey = BuildAssemblyKey(message.documentId, message.pageIndex);
         if (!_pageAssemblies.TryGetValue(assemblyKey, out var assembly))
         {
             assembly = new PageAssemblyState
@@ -201,6 +173,7 @@ public class DocumentManager : MonoBehaviour
         _pageAssemblies.Remove(assemblyKey);
 
         _sessionState.CurrentPageIndex = assembly.PageIndex;
+        OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
 
         if (pdfPageDisplay != null)
             pdfPageDisplay.ShowFromBytes(assembledBytes, assembly.Width, assembly.Height);
@@ -209,7 +182,6 @@ public class DocumentManager : MonoBehaviour
 
         var completedMessage = new DocumentPageMessage
         {
-            documentId = _sessionState.CurrentDocumentId,
             pageIndex = assembly.PageIndex,
             totalPages = assembly.TotalPages,
             width = assembly.Width,
@@ -224,26 +196,9 @@ public class DocumentManager : MonoBehaviour
 
     private void HandleDocumentClose(DocumentCloseMessage message)
     {
-        if (message == null || string.IsNullOrWhiteSpace(message.documentId))
-        {
-            Debug.LogWarning("DocumentManager: ignoring invalid document-close payload.");
-            return;
-        }
-
-        if (_sessionState.IsDocumentOpen && !string.Equals(message.documentId, _sessionState.CurrentDocumentId, StringComparison.Ordinal))
-        {
-            Debug.LogWarning($"DocumentManager: ignoring document-close for non-active document '{message.documentId}'. Active='{_sessionState.CurrentDocumentId}'.");
-            return;
-        }
-
         ResetDocumentState();
         ClearAssembliesForCurrentDocument();
         OnDocumentClose?.Invoke(message);
-    }
-
-    private static string BuildAssemblyKey(string documentId, int pageIndex)
-    {
-        return $"{documentId}:{pageIndex}";
     }
 
     private void ClearAssembliesForCurrentDocument()
@@ -276,7 +231,6 @@ public class DocumentManager : MonoBehaviour
     private void ResetDocumentState()
     {
         _sessionState.IsDocumentOpen = false;
-        _sessionState.CurrentDocumentId = null;
         _sessionState.CurrentDocumentName = null;
         _sessionState.TotalPages = 0;
         _sessionState.CurrentPageIndex = -1;

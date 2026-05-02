@@ -21,14 +21,12 @@ using UnityEngine;
 
 [Serializable] public class DocumentStartMessage
 {
-    public string documentId;
     public string documentName;
     public int totalPages;
 }
 
 [Serializable] public class DocumentPageMessage
 {
-    public string documentId;
     public int pageIndex;
     public int totalPages;
     public int width;
@@ -40,18 +38,10 @@ using UnityEngine;
 
 [Serializable] public class DocumentCloseMessage
 {
-    public string documentId;
-}
-
-[Serializable] public class DocumentRequestPageMessage
-{
-    public string documentId;
-    public int pageIndex;
+    public string documentName;
 }
 
 [Serializable] public class DocumentNavigateMessage
 {
-    public string documentId;
     public int pageIndex;
-    public string source;
 }
