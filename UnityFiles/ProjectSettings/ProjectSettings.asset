@@ -147,8 +147,6 @@ PlayerSettings:
   preloadedAssets:
   - {fileID: 11400000, guid: 2c0a335bcc5238b4097ce9bff3bafe06, type: 2}
   - {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  - {fileID: 614987775446207830, guid: f8053b34d8331a0439835a7fd7546944, type: 2}
-  - {fileID: -993682797421087178, guid: bfca321f4e9590246828d3c7bab85342, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -926,7 +924,13 @@ PlayerSettings:
   XboxOneOverrideIdentityName: 
   XboxOneOverrideIdentityPublisher: 
   vrEditorSettings: {}
-  cloudServicesEnabled: {}
+  cloudServicesEnabled:
+    Build: 0
+    Game Performance: 0
+    Legacy Analytics: 0
+    Purchasing: 0
+    UDP: 0
+    Unity Ads: 0
   luminIcon:
     m_Name: 
     m_ModelFolderPath: 
@@ -948,11 +952,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
-  cloudProjectId: 9a367bf0-e6b7-4213-a4c4-2a772725f0d6
+  cloudProjectId: 4df190c8-033d-4b13-b50b-12622e7fa384
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
   projectName: Quest_Camera
-  organizationId: salvadorgonzales111
+  organizationId: gahshunk
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}

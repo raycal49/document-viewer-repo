@@ -7,8 +7,9 @@
         "GUID:a10a7408f1036a74baaa98d49d9f3902",
         "GUID:bcbe613733fa89d4b8da4ef5416a7d49",
         "GUID:f12aafacab75a87499e7e45c873ffab8",
-        "GUID:44b32439a3763d54ead5c6191b4709e0"
-    ],
+        "GUID:44b32439a3763d54ead5c6191b4709e0",
+        "Unity.TextMeshPro"
+        ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

@@ -19,8 +19,10 @@ public class PeerConnectionManager : MonoBehaviour
     private AudioStreamTrack _remoteAudioTrack;
 
     private RTCDataChannel _annotationChannel;
+    private RTCDataChannel _documentsChannel;
 
     public RTCDataChannel AnnotationChannel => _annotationChannel;
+    public RTCDataChannel DocumentsChannel => _documentsChannel;
 
     public bool IsReady => _peerConnection != null;
 
@@ -52,15 +54,23 @@ public class PeerConnectionManager : MonoBehaviour
         _remoteAudioSource.spatialBlend = 0f;
 
         _annotationChannel = _peerConnection.CreateDataChannel("annotations");
+        _documentsChannel = _peerConnection.CreateDataChannel("documents");
+        HookUpDataChannelCallbacks(_annotationChannel, "annotations");
+        HookUpDataChannelCallbacks(_documentsChannel, "documents");
         HookUpEvents();
-        Debug.Log("PeerConnectionManager: Peer connection ready");
+        Debug.Log("PeerConnectionManager: Peer connection ready (channels: annotations, documents)");
     }
 
     public void Disconnect()
     {
         UnhookEvents();
+        UnhookDataChannelCallbacks(_annotationChannel);
         _annotationChannel?.Close();
         _annotationChannel = null;
+
+        UnhookDataChannelCallbacks(_documentsChannel);
+        _documentsChannel?.Close();
+        _documentsChannel = null;
         _videoTrack?.Dispose();
         _videoTrack = null;
         _peerConnection?.Close();
@@ -72,6 +82,25 @@ public class PeerConnectionManager : MonoBehaviour
         _remoteAudioTrack = null;
 
         Debug.Log("PeerConnectionManager: Disconnected.");
+    }
+
+
+    private static void HookUpDataChannelCallbacks(RTCDataChannel channel, string channelName)
+    {
+        if (channel == null) return;
+
+        channel.OnOpen = () => Debug.Log($"PeerConnectionManager: Data channel '{channelName}' opened.");
+        channel.OnClose = () => Debug.Log($"PeerConnectionManager: Data channel '{channelName}' closed.");
+        channel.OnError = error => Debug.LogError($"PeerConnectionManager: Data channel '{channelName}' error: {error}");
+    }
+
+    private static void UnhookDataChannelCallbacks(RTCDataChannel channel)
+    {
+        if (channel == null) return;
+
+        channel.OnOpen = null;
+        channel.OnClose = null;
+        channel.OnError = null;
     }
 
     private void HookUpEvents()

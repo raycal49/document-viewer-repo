@@ -1,0 +1,167 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1000000000000000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4000000000000000001}
+  - component: {fileID: 1140000000000000001}
+  - component: {fileID: 1140000000000000002}
+  - component: {fileID: 1140000000000000003}
+  - component: {fileID: 1140000000000000004}
+  - component: {fileID: 1140000000000000005}
+  - component: {fileID: 1140000000000000006}
+  - component: {fileID: 1140000000000000007}
+  m_Layer: 0
+  m_Name: DocumentNavigationHarnessRig
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4000000000000000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1140000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f83c512a7e9d4b06c12a8e3f69b74d20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _isDevMode: 0
+  _testTexture: {fileID: 0}
+  _testJpegBytes: {fileID: 0}
+--- !u!114 &1140000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ad7565cc5814629a8fc0bb855856cfe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pdfPageDisplay: {fileID: 1140000000000000001}
+  chunkAssemblyTimeoutSeconds: 15
+--- !u!114 &1140000000000000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bf0818c860d4fad85348e7ee23b98b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1140000000000000004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4db0416f54c843bd9300afc704989d91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  documentManager: {fileID: 1140000000000000002}
+  navigationChannel: {fileID: 1140000000000000003}
+--- !u!114 &1140000000000000005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb4af8324e844ce48ffeda7be27459d9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  navigationController: {fileID: 1140000000000000004}
+  prevSource: quest-prev-button
+  nextSource: quest-next-button
+  jumpSource: quest-jump-input
+  enableQuestABPageTurn: 1
+  aButtonSource: quest-a-button
+  bButtonSource: quest-b-button
+  controllerDebounceSeconds: 0.2
+--- !u!114 &1140000000000000006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64ff6b538aa745548f851874f67f7f8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  documentManager: {fileID: 1140000000000000002}
+  navigationController: {fileID: 1140000000000000004}
+  navigationChannel: {fileID: 1140000000000000003}
+  documentId: exec_summary
+  documentName: Exec Summary
+  autoSortFromNames: 1
+  unorderedAssets: []
+  orderedPageAssets: []
+  chunkSizeBytes: 16384
+  sendFirstPageOnSessionStart: 1
+  autoStartSessionOnEnable: 1
+  listenToNavigateApplied: 1
+  listenToRequestPageIntent: 1
+  logAllJsonTraffic: 1
+  prettyPrintJsonLogs: 0
+  maxJsonCharacters: 0
+  verboseLogs: 1
+
+--- !u!114 &1140000000000000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000000000000000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a14eef992145f084c5186648f8947f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  navigationController: {fileID: 1140000000000000004}
+  leftHandGestures: {fileID: 0}
+  rightHandGestures: {fileID: 0}
+  previousPageGesture: 0
+  nextPageGesture: 1
+  previousGestureSource: microgesture-prev
+  nextGestureSource: microgesture-next
+  cooldownSeconds: 0.35
+  logAcceptedGestures: 1
+  logIgnoredGestures: 0
