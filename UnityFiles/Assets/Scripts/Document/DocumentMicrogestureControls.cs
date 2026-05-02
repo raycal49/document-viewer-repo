@@ -17,10 +17,11 @@ public class DocumentMicrogestureSwipeControls : MonoBehaviour
 
     [Header("Gesture mapping")]
     [Tooltip("Gesture value that should trigger previous page. Select in Inspector for your SDK version.")]
-    [SerializeField] private OVRHand.MicrogestureType previousPageGesture = (OVRHand.MicrogestureType)0;
+    [SerializeField]
+    private OVRHand.MicrogestureType previousPageGesture = OVRHand.MicrogestureType.SwipeLeft;
 
     [Tooltip("Gesture value that should trigger next page. Select in Inspector for your SDK version.")]
-    [SerializeField] private OVRHand.MicrogestureType nextPageGesture = (OVRHand.MicrogestureType)1;
+    [SerializeField] private OVRHand.MicrogestureType nextPageGesture = OVRHand.MicrogestureType.SwipeRight;
 
     [Header("debounce")]
     [SerializeField] private float cooldownSeconds = 0.35f;

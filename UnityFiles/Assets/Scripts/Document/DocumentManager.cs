@@ -1,10 +1,11 @@
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json.Linq;
 using Unity.WebRTC;
 using UnityEngine;
+using static Codice.CM.WorkspaceServer.DataStore.WkTree.WriteWorkspaceTree;
 
 public class DocumentManager : MonoBehaviour
 {
@@ -133,38 +134,8 @@ public class DocumentManager : MonoBehaviour
 
     private void HandleDocumentPage(DocumentPageMessage message)
     {
-        if (message == null)
-        {
-            Debug.LogWarning("DocumentManager: ignoring null document-page payload.");
-            return;
-        }
+        var assemblyKey = $"{message.pageIndex}";
 
-        if (!_sessionState.IsDocumentOpen)
-        {
-            Debug.LogWarning("DocumentManager: ignoring document-page because no document is open.");
-            return;
-        }
-
-
-        if (message.pageIndex < 0 || (_sessionState.TotalPages > 0 && message.pageIndex >= _sessionState.TotalPages))
-        {
-            Debug.LogWarning($"DocumentManager: ignoring out-of-range page index {message.pageIndex} for totalPages={_sessionState.TotalPages}.");
-            return;
-        }
-
-        if (message.totalChunks <= 0 || message.chunkIndex < 0 || message.chunkIndex >= message.totalChunks)
-        {
-            Debug.LogWarning($"DocumentManager: ignoring invalid chunk metadata chunkIndex={message.chunkIndex}, totalChunks={message.totalChunks}.");
-            return;
-        }
-
-        if (message.data == null || message.data.Length == 0)
-        {
-            Debug.LogWarning("DocumentManager: ignoring document-page with empty chunk payload.");
-            return;
-        }
-
-        var assemblyKey = BuildAssemblyKey(message.pageIndex);
         if (!_pageAssemblies.TryGetValue(assemblyKey, out var assembly))
         {
             assembly = new PageAssemblyState
@@ -229,11 +200,6 @@ public class DocumentManager : MonoBehaviour
         ResetDocumentState();
         ClearAssembliesForCurrentDocument();
         OnDocumentClose?.Invoke(message);
-    }
-
-    private static string BuildAssemblyKey(int pageIndex)
-    {
-        return $"{pageIndex}";
     }
 
     private void ClearAssembliesForCurrentDocument()
