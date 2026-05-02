@@ -17,6 +17,7 @@ public class DocumentNavigationChannel : MonoBehaviour
         _dataChannel = dataChannel;
     }
 
+    // this does not need to be in the final version so to speak
     public bool TryHandleInboundMessage(string json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -71,4 +72,21 @@ public class DocumentNavigationChannel : MonoBehaviour
         _dataChannel.Send(Encoding.UTF8.GetBytes(json));
         return true;
     }
+
+    //public bool NavigatePrevious()
+    //{
+    //    if (documentManager == null)
+    //        return false;
+
+    //    // this needs to call `SendNavigate` in order to truly, truly send. same with NavigateNext()
+    //    return NavigateToPage(documentManager.CurrentPageIndex - 1);
+    //}
+
+    //public bool NavigateNext()
+    //{
+    //    if (documentManager == null)
+    //        return false;
+
+    //    return NavigateToPage(documentManager.CurrentPageIndex + 1);
+    //}
 }

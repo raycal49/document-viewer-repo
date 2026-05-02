@@ -23,7 +23,6 @@ public class DocumentUIController : MonoBehaviour
     {
         if (documentManager != null)
         {
-            documentManager.OnDocumentStart += HandleDocumentStart;
             documentManager.OnPageIndexChanged += HandlePageIndexChanged;
             documentManager.OnDocumentClose += HandleDocumentClose;
         }
@@ -38,7 +37,6 @@ public class DocumentUIController : MonoBehaviour
     {
         if (documentManager != null)
         {
-            documentManager.OnDocumentStart -= HandleDocumentStart;
             documentManager.OnPageIndexChanged -= HandlePageIndexChanged;
             documentManager.OnDocumentClose -= HandleDocumentClose;
         }

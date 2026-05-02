@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 
 public class DocumentNavigationController : MonoBehaviour
@@ -8,12 +9,20 @@ public class DocumentNavigationController : MonoBehaviour
 
     public event Action<DocumentNavigateMessage> OnNavigateApplied;
 
+    [Header("PageCountJump")]
+    [SerializeField] private TextMeshProUGUI pageCountJumpLabel;
+
     public void Configure(DocumentManager manager, DocumentNavigationChannel channel)
     {
         DetachFromChannel();
         documentManager = manager;
         navigationChannel = channel;
         AttachToChannel();
+    }
+
+    private void Start()
+    {
+        documentManager.OnDocumentStart += RefreshPageCountJumpLabel;
     }
 
     private void OnEnable()
@@ -26,12 +35,14 @@ public class DocumentNavigationController : MonoBehaviour
         DetachFromChannel();
     }
 
+    // actually, due to the nature of how this works, really, its just `NavigateToPage` that must call `SendNavigate`! 
+    // this is because, well, everything else just calls `NavigateToPage`!
     public bool NavigatePrevious()
     {
         if (documentManager == null)
             return false;
 
-        // this needs to call `SendNavigate` in order to truly, truly send. same with NavigateNext()
+        // this needs to call `SendNavigate`
         return NavigateToPage(documentManager.CurrentPageIndex - 1);
     }
 
@@ -43,6 +54,7 @@ public class DocumentNavigationController : MonoBehaviour
         return NavigateToPage(documentManager.CurrentPageIndex + 1);
     }
 
+    // Now THIS
     public bool NavigateToPage(int targetPageIndex)
     {
         if (!CanNavigate())
@@ -50,6 +62,14 @@ public class DocumentNavigationController : MonoBehaviour
 
         if (!documentManager.TrySetCurrentPageIndex(targetPageIndex, out var clampedPageIndex))
             return false;
+
+        int previousPageIndex = documentManager.CurrentPageIndex-1;
+
+        int delta = clampedPageIndex - previousPageIndex;
+        if (delta != 0)
+        {
+            RefreshPageCountJumpLabel();
+        }
 
         var message = new DocumentNavigateMessage
         {
@@ -60,6 +80,23 @@ public class DocumentNavigationController : MonoBehaviour
         return true;
     }
 
+    private void RefreshPageCountJumpLabel()
+    {
+        if (pageCountJumpLabel == null || documentManager == null)
+            return;
+
+        int totalPages = documentManager.TotalPages;
+
+        if (totalPages <= 0)
+        {
+            pageCountJumpLabel.text = "- / -";
+            return;
+        }
+
+        // Convert 0-based index to 1-based page number for display.
+        int currentDisplayPage = Mathf.Clamp(documentManager.CurrentPageIndex + 1, 1, totalPages);
+        pageCountJumpLabel.text = $"{currentDisplayPage} / {totalPages}";
+    }
 
     private void HandleInboundNavigate(DocumentNavigateMessage message)
     {
@@ -87,7 +124,6 @@ public class DocumentNavigationController : MonoBehaviour
 
         return true;
     }
-
 
     private void AttachToChannel()
     {

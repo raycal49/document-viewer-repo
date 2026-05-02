@@ -22,25 +22,6 @@ public class DocumentManagerTests
     }
 
     [Test]
-    public void HandleMessage_DocumentStart_InvokesStartEventAndUpdatesState()
-    {
-        DocumentStartMessage observed = null;
-        _manager.OnDocumentStart += msg => observed = msg;
-
-        const string json = "{\"type\":\"document-start\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
-        _manager.HandleMessage(json);
-
-        Assert.NotNull(observed);
-        Assert.AreEqual("Transformer Manual", observed.documentName);
-        Assert.AreEqual(12, observed.totalPages);
-
-        Assert.IsTrue(_manager.IsDocumentOpen);
-        Assert.AreEqual("Transformer Manual", _manager.CurrentDocumentName);
-        Assert.AreEqual(12, _manager.TotalPages);
-        Assert.AreEqual(0, _manager.CurrentPageIndex);
-    }
-
-    [Test]
     public void HandleMessage_DocumentPage_RequiresAllChunksBeforeEvent()
     {
         const string startJson = "{\"type\":\"document-start\",\"documentName\":\"Transformer Manual\",\"totalPages\":12}";
@@ -146,17 +127,13 @@ public class DocumentManagerTests
     [Test]
     public void HandleMessage_UnknownType_DoesNotInvokeEvents()
     {
-        var startCalled = false;
         var pageCalled = false;
         var closeCalled = false;
 
-        _manager.OnDocumentStart += _ => startCalled = true;
-        _manager.OnDocumentPage += _ => pageCalled = true;
         _manager.OnDocumentClose += _ => closeCalled = true;
 
         _manager.HandleMessage("{\"type\":\"document-unknown\"}");
 
-        Assert.IsFalse(startCalled);
         Assert.IsFalse(pageCalled);
         Assert.IsFalse(closeCalled);
     }

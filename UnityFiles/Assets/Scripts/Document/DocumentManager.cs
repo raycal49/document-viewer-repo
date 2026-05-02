@@ -12,7 +12,7 @@ public class DocumentManager : MonoBehaviour
     [SerializeField] private PdfPageDisplay pdfPageDisplay;
     [SerializeField] private float chunkAssemblyTimeoutSeconds = 15f;
 
-    public event Action<DocumentStartMessage> OnDocumentStart;
+    public event Action OnDocumentStart;
     public event Action<DocumentPageMessage> OnDocumentPage;
     public event Action<DocumentCloseMessage> OnDocumentClose;
     public event Action<string> OnRawJsonMessageReceived;
@@ -129,8 +129,8 @@ public class DocumentManager : MonoBehaviour
 
         ClearAssembliesForCurrentDocument();
         OnPageIndexChanged?.Invoke(_sessionState.CurrentPageIndex, _sessionState.TotalPages);
-        OnDocumentStart?.Invoke(message);
-        }
+        OnDocumentStart?.Invoke();
+    }
 
     private void HandleDocumentPage(DocumentPageMessage message)
     {
